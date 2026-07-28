@@ -70,8 +70,6 @@ export function useLetterImageUpload({ letterId }: { letterId?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const clearError = useCallback(() => setError(null), []);
-
   // Returns the stored image on success, or null after setting `error`.
   const upload = useCallback(
     async (file: File): Promise<DraftImage | null> => {
@@ -111,5 +109,5 @@ export function useLetterImageUpload({ letterId }: { letterId?: string }) {
     [letterId],
   );
 
-  return { busy, error, clearError, upload };
+  return { busy, error, upload };
 }

@@ -27,7 +27,7 @@ export function imageMarker(id: string): string {
 // failure mode: an unmatched ** or * must come back as literal characters. A
 // parent writing "2 * 3" or trailing off mid-word should never lose the rest of
 // their letter to a greedy match.
-function parseSpans(text: string): Span[] {
+export function parseSpans(text: string): Span[] {
   const spans: Span[] = [];
   let bold = false;
   let italic = false;

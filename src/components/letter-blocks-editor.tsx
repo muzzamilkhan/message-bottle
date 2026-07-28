@@ -55,6 +55,11 @@ export function LetterBlocksEditor({
   if (keysRef.current.length !== blocks.length) {
     // Blocks were added or removed outside a keyed operation (the first render,
     // or a draft loading). Rebuild, preferring an image id where there is one.
+    // A length comparison is enough to catch that because each draft is its
+    // own route (/letters/new, /letters/[id]): LetterForm mounts fresh per
+    // letter, and `blocks` is never swapped to a different letter in place. A
+    // future refactor that lets one mounted editor switch between drafts
+    // would need a stronger guard than length alone.
     keysRef.current = blocks.map(
       (block, index) =>
         keysRef.current[index] ??
