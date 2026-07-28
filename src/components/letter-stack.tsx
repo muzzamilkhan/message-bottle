@@ -25,9 +25,13 @@ export type StackLetter = {
 export function LetterStack({
   letters,
   openToken,
+  bypass = false,
 }: {
   letters: StackLetter[];
   openToken: string;
+  // Passed straight down to the photos. See LetterBody: text and images have to
+  // clear the age gate together.
+  bypass?: boolean;
 }) {
   // Index of the letter currently on top of the stack. Oldest is first, so we
   // read from the bottom of the pile forward in time.
@@ -146,7 +150,11 @@ export function LetterStack({
                 onPointerUp={isTop ? onPointerUp : undefined}
                 onPointerCancel={isTop ? onPointerUp : undefined}
               >
-                <LetterCard letter={letter} openToken={openToken} />
+                <LetterCard
+                  letter={letter}
+                  openToken={openToken}
+                  bypass={bypass}
+                />
               </div>
             );
           })}
@@ -173,9 +181,11 @@ export function LetterStack({
 function LetterCard({
   letter,
   openToken,
+  bypass,
 }: {
   letter: StackLetter;
   openToken: string;
+  bypass?: boolean;
 }) {
   return (
     <article className="card flex h-full flex-col overflow-y-auto">
@@ -189,6 +199,7 @@ function LetterCard({
           body={letter.body}
           images={letter.images}
           openToken={openToken}
+          bypass={bypass}
         />
       </div>
     </article>

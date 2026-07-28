@@ -124,6 +124,10 @@ export default async function OpenPage({
       ) : (
         <LetterStack
           openToken={child.openToken!}
+          // What the flag actually returned, never the raw query param, so the
+          // client can't claim a bypass the server refused. The image route
+          // re-checks the flag for itself regardless.
+          bypass={testOverride}
           letters={child.letters.map(
             (letter): StackLetter => ({
               id: letter.id,
