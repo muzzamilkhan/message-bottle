@@ -52,10 +52,11 @@ export const PHOTO_MIME_TYPES = ["image/webp", "image/jpeg", "image/png"] as con
 export const PHOTO_QUALITY_LADDER = [0.82, 0.7, 0.6] as const;
 ```
 
-- `coverCrop(width, height, target)` → the source rectangle (`sx, sy, sw, sh`) that
-  center-crops the image to a square. Landscape crops the sides, portrait crops the top
-  and bottom, square passes through. A source smaller than the target still scales up to
-  the target so every stored photo is exactly 160×160.
+- `coverCrop(width, height)` → the source rectangle (`sx, sy, sw, sh`) that center-crops
+  the image to its largest centered square. Landscape crops the sides, portrait crops the
+  top and bottom, square passes through. The target size is not a parameter: cropping picks
+  the square, and scaling it to 160px happens at draw time, so a source smaller than the
+  target is upscaled and every stored photo is exactly 160×160.
 - `downscaleSteps(from, to)` → the ladder of intermediate widths. Repeated halving while
   the source is more than 2× the target, then the target. Drawing a 4000px photo straight
   to 160px aliases badly because browsers do not box-filter at extreme ratios; stepping is
