@@ -100,8 +100,6 @@ model Letter {
   recipientName String
   child         Child?   @relation(fields: [childId], references: [id], onDelete: SetNull)
   childId       String?
-  // The letter cannot be opened until this moment arrives.
-  deliverAt     DateTime?
   // Lifecycle: "DRAFT" letters are still editable by their author and never
   // reach the child. "SENT" letters are sealed forever — the author can no
   // longer view, edit, or delete them.

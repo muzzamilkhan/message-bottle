@@ -1,7 +1,3 @@
-export function isUnlocked(deliverAt: Date): boolean {
-  return deliverAt.getTime() <= Date.now();
-}
-
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
@@ -10,8 +6,8 @@ export function formatDate(date: Date): string {
   }).format(date);
 }
 
-export function countdown(deliverAt: Date): string {
-  const ms = deliverAt.getTime() - Date.now();
+export function countdown(target: Date): string {
+  const ms = target.getTime() - Date.now();
   if (ms <= 0) return "Ready to open!";
 
   const days = Math.floor(ms / 86_400_000);

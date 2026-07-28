@@ -55,9 +55,6 @@ export default async function EditDraftPage({
             title: letter.title,
             childId: letter.childId,
             body: letter.body,
-            deliverAt: letter.deliverAt
-              ? letter.deliverAt.toISOString().slice(0, 10)
-              : null,
           }}
         />
 

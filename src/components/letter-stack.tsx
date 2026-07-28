@@ -1,20 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Bottle } from "./bottle";
 
 // One letter, pre-formatted on the server so the client never touches Date
-// logic. Locked letters (delivery date still in the future) travel through the
-// stack too, shown as a sealed bottle you can swipe past.
+// logic. By the time the stack renders, the child has reached their open age,
+// so every letter here is unlocked and ready to read.
 export type StackLetter = {
   id: string;
   title: string;
   body: string;
   authorName: string;
   writtenDate: string;
-  deliverDate: string;
-  countdown: string;
-  unlocked: boolean;
 };
 
 // How far (px) the top letter must be dragged before it flies away for good.
@@ -196,25 +192,6 @@ export function LetterStack({ letters }: { letters: StackLetter[] }) {
 }
 
 function LetterCard({ letter }: { letter: StackLetter }) {
-  if (!letter.unlocked) {
-    return (
-      <div className="card flex h-full flex-col items-center justify-center py-10 text-center">
-        <div className="animate-bob">
-          <Bottle className="w-24" />
-        </div>
-        <span className="mt-3 rounded-full bg-sea-100 px-4 py-1 text-xs font-semibold text-sea-700">
-          🔒 {letter.countdown}
-        </span>
-        <p className="mt-3 text-sea-600">
-          This bottle opens on <strong>{letter.deliverDate}</strong>.
-        </p>
-        <p className="mt-1 text-xs text-sea-400">
-          From {letter.authorName}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <article className="card flex h-full flex-col overflow-y-auto">
       <h2 className="text-2xl font-extrabold text-sea-800">{letter.title}</h2>
