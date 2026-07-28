@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { Bottle } from "@/components/bottle";
+import { LetterStack, type StackLetter } from "@/components/letter-stack";
 import { countdown, formatDate, isUnlocked } from "@/lib/letters";
 import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
 
@@ -52,8 +52,10 @@ export default async function OpenPage({
     where: { openToken: token },
     include: {
       letters: {
-        orderBy: { deliverAt: "asc" },
-        include: { photos: true },
+        // Oldest letter first — the child reads forward through time, one
+        // bottle at a time, swiping each away to reach the next.
+        orderBy: { createdAt: "asc" },
+        include: { photos: true, author: { select: { name: true } } },
       },
     },
   });
@@ -113,58 +115,21 @@ export default async function OpenPage({
           No letters have washed ashore yet. Check back soon!
         </div>
       ) : (
-        <div className="space-y-6">
-          {child.letters.map((letter) => {
-            const unlocked = testOverride || isUnlocked(letter.deliverAt);
-            if (!unlocked) {
-              return (
-                <div
-                  key={letter.id}
-                  className="card flex flex-col items-center py-10 text-center"
-                >
-                  <div className="animate-bob">
-                    <Bottle className="w-24" />
-                  </div>
-                  <span className="mt-3 rounded-full bg-sea-100 px-4 py-1 text-xs font-semibold text-sea-700">
-                    🔒 {countdown(letter.deliverAt)}
-                  </span>
-                  <p className="mt-3 text-sea-600">
-                    One more bottle opens on{" "}
-                    <strong>{formatDate(letter.deliverAt)}</strong>.
-                  </p>
-                </div>
-              );
-            }
-            return (
-              <article key={letter.id} className="card">
-                <h2 className="text-2xl font-extrabold text-sea-800">
-                  {letter.title}
-                </h2>
-                <p className="mt-1 text-xs text-sea-500">
-                  Written {formatDate(letter.createdAt)}
-                </p>
-                <div className="mt-5 whitespace-pre-wrap text-lg leading-relaxed text-sea-800">
-                  {letter.body}
-                </div>
-                {letter.photos.length > 0 && (
-                  <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {letter.photos.map((photo) => (
-                      <div key={photo.id} className="relative aspect-square">
-                        <Image
-                          src={photo.url}
-                          alt="A photo tucked into the letter"
-                          fill
-                          sizes="(max-width: 640px) 50vw, 200px"
-                          className="rounded-2xl object-cover ring-1 ring-sea-100"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
+        <LetterStack
+          letters={child.letters.map(
+            (letter): StackLetter => ({
+              id: letter.id,
+              title: letter.title,
+              body: letter.body,
+              authorName: letter.author?.name?.trim() || "A parent",
+              writtenDate: formatDate(letter.createdAt),
+              deliverDate: formatDate(letter.deliverAt),
+              countdown: countdown(letter.deliverAt),
+              unlocked: testOverride || isUnlocked(letter.deliverAt),
+              photos: letter.photos.map((p) => ({ id: p.id, url: p.url })),
+            }),
+          )}
+        />
       )}
     </Shell>
   );
