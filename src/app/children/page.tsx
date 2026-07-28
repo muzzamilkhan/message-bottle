@@ -6,7 +6,7 @@ import { Header } from "@/components/header";
 import { AddChildSection } from "@/components/add-child-section";
 import { ChildCard, type ChildCardData } from "@/components/child-card";
 import { formatDate } from "@/lib/letters";
-import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
+import { describeBottleTimer } from "@/lib/age";
 
 export default async function ChildrenPage() {
   const session = await auth();
@@ -29,15 +29,7 @@ export default async function ChildrenPage() {
   // Shape each owned child for the interactive card, precomputing the
   // bottle-timer labels on the server.
   const childCards: ChildCardData[] = children.map((child) => {
-    let timerLabel: string | null = null;
-    let unlocked = false;
-    if (child.openAtAge && child.birthday) {
-      unlocked = hasReachedOpenAge(child.birthday, child.openAtAge);
-      const openDate = birthdayAtAge(child.birthday, child.openAtAge);
-      timerLabel = unlocked
-        ? `Unlocked — ${child.name} can open their bottles now`
-        : `Opens at age ${child.openAtAge} · ${formatDate(openDate)}`;
-    }
+    const { timerLabel, unlocked } = describeBottleTimer(child, formatDate);
     return {
       id: child.id,
       name: child.name,

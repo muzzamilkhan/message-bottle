@@ -26,3 +26,30 @@ export function hasReachedOpenAge(
 ): boolean {
   return at.getTime() >= birthdayAtAge(birthday, openAtAge).getTime();
 }
+
+// How a child's bottle timer reads on their card: whether it has unlocked, and
+// the label describing it. Returns nulls when the child has no timer set.
+export type BottleTimer = {
+  unlocked: boolean;
+  timerLabel: string | null;
+};
+
+export function describeBottleTimer(
+  child: { name: string; birthday: Date | null; openAtAge: number | null },
+  formatDate: (date: Date) => string,
+  at: Date = new Date(),
+): BottleTimer {
+  if (!child.birthday || !child.openAtAge) {
+    return { unlocked: false, timerLabel: null };
+  }
+
+  const unlocked = hasReachedOpenAge(child.birthday, child.openAtAge, at);
+  const openDate = birthdayAtAge(child.birthday, child.openAtAge);
+
+  return {
+    unlocked,
+    timerLabel: unlocked
+      ? `Unlocked — ${child.name} can open their bottles now`
+      : `Opens at age ${child.openAtAge} · ${formatDate(openDate)}`,
+  };
+}
