@@ -10,11 +10,23 @@ export type LetterFormValues = {
   body: string;
 };
 
-export type LetterInputError = "SEND_INCOMPLETE" | "DRAFT_NEEDS_TITLE";
+export type LetterInputError =
+  | "SEND_INCOMPLETE"
+  | "DRAFT_NEEDS_TITLE"
+  | "SEND_IMAGES_NOT_ALLOWED";
 
 export type LetterInputResult =
   | { ok: true; value: LetterFormValues & { sealing: boolean } }
   | { ok: false; error: LetterInputError };
+
+// What the author is currently entitled to, and what this letter holds.
+// Passed in rather than read here so the rule stays pure and testable.
+export type LetterImageContext = {
+  // Whether the submitted body references any images.
+  hasImages: boolean;
+  // Whether the author's subscription currently covers holding images.
+  mayHoldImages: boolean;
+};
 
 export function letterInputMessage(error: LetterInputError): string {
   switch (error) {
@@ -22,6 +34,8 @@ export function letterInputMessage(error: LetterInputError): string {
       return "Please fill in the title, child, and message.";
     case "DRAFT_NEEDS_TITLE":
       return "Give your draft a title so you can find it later.";
+    case "SEND_IMAGES_NOT_ALLOWED":
+      return "This letter has photos, which are part of Pro. Remove them to seal it, or renew to keep them.";
   }
 }
 
@@ -34,6 +48,7 @@ export function parseLetterIntent(raw: string): LetterIntent {
 export function parseLetterInput(
   raw: LetterFormValues,
   intent: LetterIntent,
+  context: LetterImageContext,
 ): LetterInputResult {
   const title = raw.title.trim();
   const childId = raw.childId.trim();
@@ -44,6 +59,11 @@ export function parseLetterInput(
   // message, not just a title.
   if (sealing) {
     if (!title || !childId || !body) return { ok: false, error: "SEND_INCOMPLETE" };
+    // A subscription that lapsed mid-draft blocks sealing, not saving — the
+    // parent keeps their words and chooses whether to drop the photos or renew.
+    if (context.hasImages && !context.mayHoldImages) {
+      return { ok: false, error: "SEND_IMAGES_NOT_ALLOWED" };
+    }
   } else if (!title) {
     return { ok: false, error: "DRAFT_NEEDS_TITLE" };
   }

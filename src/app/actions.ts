@@ -16,6 +16,8 @@ import {
   parseLetterInput,
   parseLetterIntent,
 } from "@/lib/letter-input";
+import { canUploadImages } from "@/lib/subscription";
+import { letterImageIds } from "@/lib/letter-body";
 
 export type LetterFormState = { error?: string };
 
@@ -37,13 +39,23 @@ export async function saveLetter(
   // A draft needs at least a title to have something to come back to; sending
   // requires the recipient and message so the sealed letter is complete. When
   // the bottle opens is set on the child, not the letter.
+  const rawBody = String(formData.get("body") ?? "");
+  const author = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscription: true },
+  });
+
   const parsed = parseLetterInput(
     {
       title: String(formData.get("title") ?? ""),
       childId: String(formData.get("childId") ?? ""),
-      body: String(formData.get("body") ?? ""),
+      body: rawBody,
     },
     parseLetterIntent(String(formData.get("intent") ?? "")),
+    {
+      hasImages: letterImageIds(rawBody).length > 0,
+      mayHoldImages: canUploadImages(author?.subscription),
+    },
   );
   if (!parsed.ok) return { error: letterInputMessage(parsed.error) };
   const { title, childId, body, sealing: submitting } = parsed.value;

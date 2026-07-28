@@ -8,6 +8,10 @@ import {
 
 const complete = { title: "For your 18th", childId: "child_1", body: "Hello!" };
 
+// Default context: the author may hold images and this letter has none. Cases
+// about the Pro rule pass their own.
+const anyone = { hasImages: false, mayHoldImages: true };
+
 describe("parseLetterIntent", () => {
   it("treats an explicit submit as sealing", () => {
     assert.equal(parseLetterIntent("submit"), "submit");
@@ -29,6 +33,7 @@ describe("parseLetterInput", () => {
       const result = parseLetterInput(
         { title: "Notes to self", childId: "", body: "" },
         "draft",
+        anyone,
       );
       assert.ok(result.ok);
       assert.equal(result.value.sealing, false);
@@ -37,7 +42,11 @@ describe("parseLetterInput", () => {
 
     it("rejects a draft with no title", () => {
       assert.partialDeepStrictEqual(
-        parseLetterInput({ title: "   ", childId: "c", body: "b" }, "draft"),
+        parseLetterInput(
+          { title: "   ", childId: "c", body: "b" },
+          "draft",
+          anyone,
+        ),
         { ok: false, error: "DRAFT_NEEDS_TITLE" },
       );
     });
@@ -45,7 +54,7 @@ describe("parseLetterInput", () => {
 
   describe("sealing a letter", () => {
     it("accepts a complete letter and marks it sealing", () => {
-      const result = parseLetterInput(complete, "submit");
+      const result = parseLetterInput(complete, "submit", anyone);
       assert.ok(result.ok);
       assert.partialDeepStrictEqual(result.value, {
         title: "For your 18th",
@@ -60,6 +69,7 @@ describe("parseLetterInput", () => {
         const result = parseLetterInput(
           { ...complete, [missing]: "  " },
           "submit",
+          anyone,
         );
         assert.partialDeepStrictEqual(result, {
           ok: false,
@@ -73,6 +83,7 @@ describe("parseLetterInput", () => {
     const result = parseLetterInput(
       { title: "  T  ", childId: "  c  ", body: "  b  " },
       "submit",
+      anyone,
     );
     assert.ok(result.ok);
     assert.partialDeepStrictEqual(result.value, {
@@ -83,9 +94,62 @@ describe("parseLetterInput", () => {
   });
 });
 
+describe("images and sealing", () => {
+  const complete = { title: "T", childId: "c1", body: "Hello" };
+
+  it("seals a letter with images when the author may hold them", () => {
+    const result = parseLetterInput(complete, "submit", {
+      hasImages: true,
+      mayHoldImages: true,
+    });
+    assert.equal(result.ok, true);
+  });
+
+  it("seals a letter with no images regardless of entitlement", () => {
+    const result = parseLetterInput(complete, "submit", {
+      hasImages: false,
+      mayHoldImages: false,
+    });
+    assert.equal(result.ok, true);
+  });
+
+  // A subscription that lapsed mid-draft.
+  it("refuses to seal a letter holding images the author may no longer hold", () => {
+    const result = parseLetterInput(complete, "submit", {
+      hasImages: true,
+      mayHoldImages: false,
+    });
+    assert.deepEqual(result, { ok: false, error: "SEND_IMAGES_NOT_ALLOWED" });
+  });
+
+  // Sealing is blocked, but the parent must never be locked out of their own
+  // unsent words.
+  it("still saves that letter as a draft", () => {
+    const result = parseLetterInput(complete, "draft", {
+      hasImages: true,
+      mayHoldImages: false,
+    });
+    assert.equal(result.ok, true);
+  });
+
+  // An incomplete letter is incomplete first — reporting the image problem
+  // would send the parent looking for photos in an empty letter.
+  it("reports incompleteness before the image rule", () => {
+    const result = parseLetterInput({ ...complete, body: "" }, "submit", {
+      hasImages: true,
+      mayHoldImages: false,
+    });
+    assert.deepEqual(result, { ok: false, error: "SEND_INCOMPLETE" });
+  });
+});
+
 describe("letterInputMessage", () => {
   it("returns a message for every error code", () => {
-    for (const code of ["SEND_INCOMPLETE", "DRAFT_NEEDS_TITLE"] as const) {
+    for (const code of [
+      "SEND_INCOMPLETE",
+      "DRAFT_NEEDS_TITLE",
+      "SEND_IMAGES_NOT_ALLOWED",
+    ] as const) {
       assert.ok(letterInputMessage(code).length > 0, `${code} has no message`);
     }
   });

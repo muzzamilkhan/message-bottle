@@ -136,6 +136,22 @@ Vercel Toolbar. With the flag off — its default, and the case wherever `EDGE_C
 unset — the query param is inert. The flag is only evaluated when `?test=yes` is actually
 present, so normal opens cost no flag lookup.
 
+### Inline letter images
+
+Letter bodies may contain `[[img:<id>]]` markers referencing `LetterImage` rows. The bytes
+live in a **private** Vercel Blob store — unreadable by URL — and are served only by
+`/api/letter-image/[id]`, which authorizes every request as the author, a co-parent with
+access to the child, or the child themselves via `openToken` **after the age gate passes**.
+The time lock covers photos exactly as it covers text.
+
+Uploading is gated on `User.subscription` through `canUploadImages`; **reading never is**,
+because the child has no account and a sealed letter must keep its photos forever.
+
+Blob deletion is never automatic. `onDelete: Cascade` removes `LetterImage` rows with their
+letter but leaves the bytes, so every path that deletes letters — `deleteLetter`,
+`deleteChild`, save-time reconciliation, and the orphan sweep — must delete blobs
+explicitly, **blobs first, then rows**.
+
 ### Dates
 
 Birthdays are parsed as `new Date("yyyy-mm-ddT12:00:00Z")` — UTC noon, so the calendar day
