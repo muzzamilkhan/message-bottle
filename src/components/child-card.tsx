@@ -8,6 +8,7 @@ import { ChildAvatar } from "@/components/child-avatar";
 export type ChildCardData = EditableChild & {
   openToken: string | null;
   lettersCount: number;
+  photosCount: number;
   birthdayLabel: string | null;
   // Human-readable bottle-timer status, or null when no timer is set.
   timerLabel: string | null;
@@ -31,6 +32,14 @@ export function ChildCard({ child }: { child: ChildCardData }) {
             child.lettersCount === 1 ? "" : "s"
           } written to ${child.name} will be deleted forever`
         : `Any letters written to ${child.name} will be deleted forever`;
+    // Photos are worth naming separately: a parent picturing "letters" is
+    // thinking about words they wrote, not photographs of their child.
+    const photoWarning =
+      child.photosCount > 0
+        ? `, including ${child.photosCount} photo${
+            child.photosCount === 1 ? "" : "s"
+          }`
+        : "";
     return (
       <li className="card space-y-4 ring-2 ring-blush-300">
         <div>
@@ -38,7 +47,8 @@ export function ChildCard({ child }: { child: ChildCardData }) {
             ⚠️ Remove {child.name}?
           </p>
           <p className="mt-2 text-sm text-sea-700">
-            {letterWarning}, and their private open link will stop working. This{" "}
+            {letterWarning}
+            {photoWarning}, and their private open link will stop working. This{" "}
             <strong>can&apos;t be undone</strong>.
           </p>
         </div>
@@ -46,7 +56,9 @@ export function ChildCard({ child }: { child: ChildCardData }) {
           <form action={deleteChild} className="sm:flex-1">
             <input type="hidden" name="id" value={child.id} />
             <button type="submit" className="btn-primary w-full">
-              Yes, remove &amp; delete letters
+              {child.photosCount > 0
+                ? "Yes, remove & delete letters & photos"
+                : "Yes, remove & delete letters"}
             </button>
           </form>
           <button

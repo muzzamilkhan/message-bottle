@@ -19,7 +19,10 @@ export default async function EditDraftPage({
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const letter = await prisma.letter.findUnique({ where: { id } });
+  const letter = await prisma.letter.findUnique({
+    where: { id },
+    include: { _count: { select: { images: true } } },
+  });
 
   if (
     !letter ||
@@ -77,7 +80,11 @@ export default async function EditDraftPage({
             type="submit"
             className="text-sm font-semibold text-sea-400 hover:text-blush-500"
           >
-            Delete this draft
+            {letter._count.images > 0
+              ? `Delete this draft and its ${letter._count.images} photo${
+                  letter._count.images === 1 ? "" : "s"
+                }`
+              : "Delete this draft"}
           </button>
         </form>
       </main>

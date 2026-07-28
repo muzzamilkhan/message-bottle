@@ -17,7 +17,15 @@ export default async function ChildrenPage() {
     prisma.child.findMany({
       where: { parentId: session.user.id },
       orderBy: { createdAt: "asc" },
-      include: { _count: { select: { letters: true } } },
+      include: {
+        _count: { select: { letters: true } },
+        // Every letter written to this child, from every co-parent, drafts
+        // and sealed alike — matches the set `deleteChild` destroys — so the
+        // photo total below covers exactly what the warning must promise.
+        letters: {
+          select: { _count: { select: { images: true } } },
+        },
+      },
     }),
     // Children other parents have shared with this user.
     prisma.child.findMany({
@@ -48,6 +56,10 @@ export default async function ChildrenPage() {
       openAtAge: child.openAtAge,
       openToken: child.openToken,
       lettersCount: child._count.letters,
+      photosCount: child.letters.reduce(
+        (total, letter) => total + letter._count.images,
+        0,
+      ),
       birthdayLabel: child.birthday ? formatDate(child.birthday) : null,
       timerLabel,
       unlocked,
