@@ -11,6 +11,11 @@ import {
   type ChildFormValues,
   type ParsedChild,
 } from "@/lib/child-input";
+import {
+  letterInputMessage,
+  parseLetterInput,
+  parseLetterIntent,
+} from "@/lib/letter-input";
 
 export type LetterFormState = { error?: string };
 
@@ -28,22 +33,20 @@ export async function saveLetter(
   }
 
   const id = String(formData.get("id") ?? "").trim();
-  const intent = String(formData.get("intent") ?? "draft").trim();
-  const submitting = intent === "submit";
-  const title = String(formData.get("title") ?? "").trim();
-  const childId = String(formData.get("childId") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
 
   // A draft needs at least a title to have something to come back to; sending
   // requires the recipient and message so the sealed letter is complete. When
   // the bottle opens is set on the child, not the letter.
-  if (submitting) {
-    if (!title || !childId || !body) {
-      return { error: "Please fill in the title, child, and message." };
-    }
-  } else if (!title) {
-    return { error: "Give your draft a title so you can find it later." };
-  }
+  const parsed = parseLetterInput(
+    {
+      title: String(formData.get("title") ?? ""),
+      childId: String(formData.get("childId") ?? ""),
+      body: String(formData.get("body") ?? ""),
+    },
+    parseLetterIntent(String(formData.get("intent") ?? "")),
+  );
+  if (!parsed.ok) return { error: letterInputMessage(parsed.error) };
+  const { title, childId, body, sealing: submitting } = parsed.value;
 
   // Verify the chosen child belongs to this user (or was shared with them by a
   // co-parent) and grab a name snapshot. A child is optional for a draft.
