@@ -70,6 +70,11 @@ model Child {
   name        String
   // A cute emoji avatar for the child.
   avatar      String        @default("🧒")
+  // A parent-uploaded profile photo as a `data:image/webp;base64,...` URL,
+  // already downscaled client-side to 160x160 (~7-9 KB). Null means fall back
+  // to the emoji `avatar`. Small enough to sit on the row, but omitted from
+  // any `select` that doesn't render it.
+  photo       String?       @db.Text
   birthday    DateTime
   // Bottle timer: the age at which this child may open their bottles via the
   // self-authenticating link. Required, and must be greater than their current

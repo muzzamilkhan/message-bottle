@@ -6,6 +6,15 @@
 // without a bundler or path-mapping loader.
 import { CHILD_AVATARS, DEFAULT_AVATAR } from "./avatars.ts";
 import { ageInYears } from "./age.ts";
+import {
+  childPhotoMessage,
+  parsePhotoDataUrl,
+  type ChildPhotoError,
+} from "./child-photo.ts";
+
+// What the form wants done with the photo column. Editing must distinguish
+// "untouched" from "removed", which an empty photo field alone can't express.
+export type PhotoAction = "keep" | "set" | "clear";
 
 // The raw strings the parent typed, echoed back on error so a re-rendered form
 // (which React resets after every action) can repopulate itself instead of
@@ -15,6 +24,10 @@ export type ChildFormValues = {
   avatar: string;
   birthday: string;
   openAtAge: string;
+  // Whether a photo was submitted — not the photo itself. The ~9 KB data URL
+  // stays in the browser's React state across an error re-render rather than
+  // making a round trip in the echoed values.
+  hasPhoto: boolean;
 };
 
 export type ParsedChild = {
@@ -22,6 +35,9 @@ export type ParsedChild = {
   avatar: string;
   birthday: Date;
   openAtAge: number;
+  // A data URL to store, `null` to clear the column, or `undefined` to leave
+  // it alone. These map straight onto Prisma's update semantics.
+  photo: string | null | undefined;
 };
 
 // Why the input was rejected. Codes rather than copy, so tests assert on rules
@@ -32,7 +48,8 @@ export type ChildInputError =
   | "BIRTHDAY_INVALID"
   | "OPEN_AGE_REQUIRED"
   | "OPEN_AGE_NOT_A_YEAR_COUNT"
-  | "OPEN_AGE_NOT_IN_FUTURE";
+  | "OPEN_AGE_NOT_IN_FUTURE"
+  | ChildPhotoError;
 
 export type ChildInputResult =
   | { ok: true; value: ParsedChild }
@@ -65,13 +82,22 @@ export function childInputMessage(
       return "The age they can open should be a whole number of years.";
     case "OPEN_AGE_NOT_IN_FUTURE":
       return `Pick an age older than ${ctx.name} is now (currently ${ctx.currentAge}).`;
+    default:
+      return childPhotoMessage(error);
   }
 }
 
 // Parse and validate the child fields. `now` is injectable so the age check is
 // deterministic under test.
 export function parseChildInput(
-  raw: ChildFormValues,
+  raw: {
+    name: string;
+    avatar: string;
+    birthday: string;
+    openAtAge: string;
+    photo: string;
+    photoAction: string;
+  },
   now: Date = new Date(),
 ): ChildInputResult {
   const name = raw.name.trim();
@@ -84,12 +110,22 @@ export function parseChildInput(
     ? raw.avatar.trim()
     : DEFAULT_AVATAR;
 
+  // An unrecognised action falls back to leaving the column alone, for the
+  // same reason an unknown avatar falls back: it means a stale client, not a
+  // user mistake.
+  const photoRaw = raw.photo.trim();
+  const action: PhotoAction =
+    raw.photoAction === "set" || raw.photoAction === "clear"
+      ? raw.photoAction
+      : "keep";
+
   // What the user just entered, so an error re-render can restore it.
   const values: ChildFormValues = {
     name,
     avatar,
     birthday: birthdayRaw,
     openAtAge: openAtAgeRaw,
+    hasPhoto: action === "set" && photoRaw.length > 0,
   };
   const fail = (
     error: ChildInputError,
@@ -114,5 +150,23 @@ export function parseChildInput(
   const currentAge = ageInYears(birthday, now);
   if (age <= currentAge) return fail("OPEN_AGE_NOT_IN_FUTURE", currentAge);
 
-  return { ok: true, value: { name, avatar, birthday, openAtAge: age } };
+  // Resolve the photo last, so a bad photo never masks a missing name.
+  let photo: string | null | undefined;
+  if (action === "clear") {
+    photo = null;
+  } else if (action === "set") {
+    // "Set" with nothing attached means the parent removed it before saving.
+    if (!photoRaw) {
+      photo = null;
+    } else {
+      const parsed = parsePhotoDataUrl(photoRaw);
+      if (!parsed.ok) return fail(parsed.error);
+      photo = photoRaw;
+    }
+  }
+
+  return {
+    ok: true,
+    value: { name, avatar, birthday, openAtAge: age, photo },
+  };
 }

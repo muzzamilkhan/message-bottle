@@ -11,6 +11,8 @@ const valid = {
   avatar: "🦊",
   birthday: "2018-03-04",
   openAtAge: "18",
+  photo: "",
+  photoAction: "keep",
 };
 
 function parse(overrides: Partial<typeof valid> = {}) {
@@ -158,6 +160,100 @@ describe("parseChildInput", () => {
     });
   });
 
+  describe("photo", () => {
+    // A valid, tiny photo data URL.
+    const photo = `data:image/webp;base64,${Buffer.from("pretend-webp!").toString("base64")}`;
+    const base = {
+      name: "Ada",
+      avatar: "🧒",
+      birthday: "2020-01-01",
+      openAtAge: "18",
+    };
+
+    it("stores a photo when the action is set", () => {
+      const result = parseChildInput(
+        { ...base, photo, photoAction: "set" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok && result.value.photo, photo);
+    });
+
+    it("clears the photo when the action is clear", () => {
+      const result = parseChildInput(
+        { ...base, photo: "", photoAction: "clear" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok && result.value.photo, null);
+    });
+
+    it("leaves the column untouched when the action is keep", () => {
+      const result = parseChildInput(
+        { ...base, photo: "", photoAction: "keep" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok, true);
+      assert.equal(result.ok && result.value.photo, undefined);
+    });
+
+    it("ignores a submitted photo when the action is keep", () => {
+      const result = parseChildInput(
+        { ...base, photo, photoAction: "keep" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok && result.value.photo, undefined);
+    });
+
+    it("falls back to keep for an unrecognised action", () => {
+      // A bad value means a stale client, not a user mistake — same reasoning
+      // as an unknown avatar falling back to the default.
+      const result = parseChildInput(
+        { ...base, photo: "", photoAction: "nonsense" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok, true);
+      assert.equal(result.ok && result.value.photo, undefined);
+    });
+
+    it("rejects an invalid data url when setting", () => {
+      const result = parseChildInput(
+        { ...base, photo: "https://example.com/cat.png", photoAction: "set" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok, false);
+      assert.equal(!result.ok && result.error, "PHOTO_MALFORMED");
+    });
+
+    it("rejects a disallowed image type when setting", () => {
+      const svg = `data:image/svg+xml;base64,${Buffer.from("<svg/>").toString("base64")}`;
+      const result = parseChildInput(
+        { ...base, photo: svg, photoAction: "set" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(!result.ok && result.error, "PHOTO_NOT_AN_IMAGE");
+    });
+
+    it("treats set with an empty photo as a clear", () => {
+      const result = parseChildInput(
+        { ...base, photo: "", photoAction: "set" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok && result.value.photo, null);
+    });
+
+    it("echoes whether a photo was submitted, not the photo", () => {
+      const result = parseChildInput(
+        { ...base, name: "", photo, photoAction: "set" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(!result.ok && result.values.hasPhoto, true);
+      // The data URL must not ride along in the echoed values.
+      assert.equal(
+        Object.values(!result.ok ? result.values : {}).includes(photo),
+        false,
+      );
+    });
+  });
+
   describe("echoed values", () => {
     it("returns the trimmed input so the form can repopulate", () => {
       const result = parse({ name: "  Ada  ", openAtAge: "3" });
@@ -167,6 +263,7 @@ describe("parseChildInput", () => {
         avatar: "🦊",
         birthday: "2018-03-04",
         openAtAge: "3",
+        hasPhoto: false,
       });
     });
 
@@ -194,6 +291,10 @@ describe("childInputMessage", () => {
       "OPEN_AGE_REQUIRED",
       "OPEN_AGE_NOT_A_YEAR_COUNT",
       "OPEN_AGE_NOT_IN_FUTURE",
+      "PHOTO_NOT_AN_IMAGE",
+      "PHOTO_MALFORMED",
+      "PHOTO_TOO_LARGE",
+      "PHOTO_TOO_LARGE_TO_READ",
     ] as const;
     for (const code of codes) {
       const message = childInputMessage(code, { name: "Ada", currentAge: 8 });

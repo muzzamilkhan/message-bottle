@@ -112,6 +112,8 @@ function parseChildForm(
     avatar: String(formData.get("avatar") ?? ""),
     birthday: String(formData.get("birthday") ?? ""),
     openAtAge: String(formData.get("openAtAge") ?? ""),
+    photo: String(formData.get("photo") ?? ""),
+    photoAction: String(formData.get("photoAction") ?? ""),
   });
 
   if (result.ok) return result.value;
@@ -141,6 +143,7 @@ export async function createChild(
     data: {
       name: parsed.name,
       avatar: parsed.avatar,
+      photo: parsed.photo ?? null,
       birthday: parsed.birthday,
       openAtAge: parsed.openAtAge,
       // Every child has an open age, so mint the self-authenticating open token
@@ -188,6 +191,7 @@ export async function updateChild(
     data: {
       name: parsed.name,
       avatar: parsed.avatar,
+      photo: parsed.photo,
       birthday: parsed.birthday,
       openAtAge: parsed.openAtAge,
       openToken,
