@@ -34,16 +34,15 @@ export function ChildForm({
   const [avatar, setAvatar] = useState<string>(child?.avatar ?? DEFAULT_AVATAR);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // On a successful create, clear the form for the next child. On a successful
-  // edit, let the parent card collapse itself.
+  // On success, reset a create form for next time, then let the parent collapse
+  // itself (an edit card, or the add-a-child section).
   useEffect(() => {
     if (!state.ok) return;
-    if (editing) {
-      onSaved?.();
-    } else {
+    if (!editing) {
       formRef.current?.reset();
       setAvatar(DEFAULT_AVATAR);
     }
+    onSaved?.();
   }, [state.ok, editing, onSaved]);
 
   return (
