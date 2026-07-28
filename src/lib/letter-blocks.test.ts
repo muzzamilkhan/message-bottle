@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { toBlocks, toBody, type LetterBlock } from "./letter-blocks.ts";
+import { letterImageIds } from "./letter-body.ts";
 
 describe("toBlocks", () => {
   it("returns nothing for an empty body", () => {
@@ -102,9 +103,9 @@ describe("toBody", () => {
   });
 });
 
-describe("round trip", () => {
-  // The property that matters: an existing draft must survive a load-and-save
-  // byte-identically, or opening a draft would silently rewrite it.
+describe("round trip through the editor's own output", () => {
+  // Bodies written by this editor normalise, so they round-trip byte-identically
+  // when loaded and saved again. Hand-edited bodies may normalise differently.
   const bodies = [
     "",
     "Dear Ada,\n\nLove, Dad",
@@ -117,6 +118,29 @@ describe("round trip", () => {
   for (const body of bodies) {
     it(`preserves ${JSON.stringify(body)}`, () => {
       assert.equal(toBody(toBlocks(body)), body);
+    });
+  }
+});
+
+describe("marker preservation", () => {
+  // The property blob deletion actually depends on: normalising a body must
+  // never change which images it references.
+  const bodies = [
+    "Hi\n",
+    "\nHi",
+    "Before\n[[img:aaa]]\nAfter",
+    "[[img:aaa]]\n\n\n[[img:bbb]]",
+    "   ",
+    " [[img:aaa]] ",
+    "a\n[[img:x]]\nb\n[[img:y]]",
+  ];
+
+  for (const body of bodies) {
+    it(`keeps every marker in ${JSON.stringify(body)}`, () => {
+      assert.deepEqual(
+        letterImageIds(toBody(toBlocks(body))),
+        letterImageIds(body),
+      );
     });
   }
 });

@@ -3,8 +3,13 @@
 // A body is stored as a plain string and always will be: letterImageIds() reads
 // it to decide which blobs are still referenced, and that is the mechanism
 // behind "delete the child, and every photo goes with it". These blocks exist
-// only inside the editor, and every edit is serialised straight back to the
-// same string — so nothing downstream can tell the editor changed.
+// only inside the editor, and serialisation normalises the body: whitespace
+// between blocks becomes a single blank line, and leading/trailing whitespace
+// goes. What is exactly preserved is what matters — the image markers, in order.
+// letterImageIds() reads the same set back, so reconciliation and the orphan
+// sweep see exactly what they always have. Bodies already written by this
+// editor round-trip byte-identically; normalisation only shows up on a
+// hand-edited body.
 
 import { IMAGE_MARKER_PATTERN, imageMarker } from "./letter-body.ts";
 
@@ -46,6 +51,9 @@ export function toBlocks(body: string): LetterBlock[] {
 
 // Serialise blocks back to a stored body. A text block may hold several
 // paragraphs, so blocks join with a blank line just as paragraphs do.
+// Normalises separation deliberately: the invariant we guarantee is marker
+// preservation, not byte identity. Hand-edited bodies may look different after
+// a round-trip; bodies written by this editor stay byte-identical.
 export function toBody(blocks: LetterBlock[]): string {
   return blocks
     .map((block) =>
