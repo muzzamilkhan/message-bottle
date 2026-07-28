@@ -6,10 +6,15 @@ import { Header } from "@/components/header";
 import { ChildAvatar } from "@/components/child-avatar";
 import { formatDate } from "@/lib/letters";
 import { getAccessibleChildren } from "@/lib/children";
+import { sweepOrphanedImages } from "@/app/actions";
 
 export default async function Dashboard() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
+
+  // Clean up images from letters that were never saved. Rides on a page load
+  // that already queries this author's letters.
+  await sweepOrphanedImages(session.user.id);
 
   const [sentCount, drafts, children] = await Promise.all([
     prisma.letter.count({
