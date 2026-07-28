@@ -10,16 +10,22 @@ datasource db {
 // ----- Auth.js (NextAuth) models -----
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  letters       Letter[]
-  children      Child[]
-  createdAt     DateTime  @default(now())
+  id              String        @id @default(cuid())
+  name            String?
+  email           String?       @unique
+  emailVerified   DateTime?
+  image           String?
+  accounts        Account[]
+  sessions        Session[]
+  letters         Letter[]
+  children        Child[]
+  // Children that other parents have shared access to with this user.
+  sharedChildren  ChildShare[]  @relation("SharedChildren")
+  // Invites this user has created to give co-parents access.
+  sentInvites     ShareInvite[] @relation("SentInvites")
+  // Invites this user has accepted.
+  acceptedInvites ShareInvite[] @relation("AcceptedInvites")
+  createdAt       DateTime      @default(now())
 }
 
 model Account {
@@ -60,15 +66,20 @@ model VerificationToken {
 // ----- App models -----
 
 model Child {
-  id        String   @id @default(cuid())
-  name      String
+  id          String        @id @default(cuid())
+  name        String
   // A cute emoji avatar for the child.
-  avatar    String   @default("🧒")
-  birthday  DateTime?
-  parent    User     @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  parentId  String
-  letters   Letter[]
-  createdAt DateTime @default(now())
+  avatar      String        @default("🧒")
+  birthday    DateTime?
+  // The owner of this child profile. Owners can share access with co-parents.
+  parent      User          @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  parentId    String
+  letters     Letter[]
+  // Co-parents who have been granted access to write letters to this child.
+  shares      ChildShare[]
+  // Pending/accepted invites that include this child.
+  inviteLinks InviteChild[]
+  createdAt   DateTime      @default(now())
 
   @@index([parentId])
 }
@@ -102,4 +113,52 @@ model Photo {
   createdAt DateTime @default(now())
 
   @@index([letterId])
+}
+
+// ----- Parent access sharing -----
+
+// A grant of access: `parent` (a co-parent) may write letters to `child`.
+// Created when a co-parent accepts a ShareInvite. The child's owner keeps
+// full control and can revoke a share at any time.
+model ChildShare {
+  id        String   @id @default(cuid())
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  childId   String
+  parent    User     @relation("SharedChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId  String
+  createdAt DateTime @default(now())
+
+  @@unique([childId, parentId])
+  @@index([parentId])
+  @@index([childId])
+}
+
+// A share link a parent generates to invite a co-parent. Anyone who opens the
+// link can accept it once signed in (creating an account first if needed).
+model ShareInvite {
+  id           String        @id @default(cuid())
+  // The random, unguessable token embedded in the share link.
+  token        String        @unique
+  inviter      User          @relation("SentInvites", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviterId    String
+  // "PENDING", "ACCEPTED", or "REVOKED".
+  status       String        @default("PENDING")
+  children     InviteChild[]
+  acceptedBy   User?         @relation("AcceptedInvites", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedById String?
+  acceptedAt   DateTime?
+  createdAt    DateTime      @default(now())
+
+  @@index([inviterId])
+}
+
+// Join table: which children a given invite grants access to.
+model InviteChild {
+  invite   ShareInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  inviteId String
+  child    Child       @relation(fields: [childId], references: [id], onDelete: Cascade)
+  childId  String
+
+  @@id([inviteId, childId])
+  @@index([childId])
 }

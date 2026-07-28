@@ -6,7 +6,12 @@ import Image from "next/image";
 import { createLetter, type LetterFormState } from "@/app/actions";
 
 type Uploaded = { url: string; name: string };
-type ChildOption = { id: string; name: string; avatar: string };
+type ChildOption = {
+  id: string;
+  name: string;
+  avatar: string;
+  owned?: boolean;
+};
 
 export function LetterForm({ children }: { children: ChildOption[] }) {
   const [state, formAction] = useActionState<LetterFormState, FormData>(
@@ -79,6 +84,7 @@ export function LetterForm({ children }: { children: ChildOption[] }) {
           {children.map((child) => (
             <option key={child.id} value={child.id}>
               {child.avatar} {child.name}
+              {child.owned === false ? " (shared with you)" : ""}
             </option>
           ))}
         </select>

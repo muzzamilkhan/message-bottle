@@ -11,11 +11,19 @@ export default async function ChildrenPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const children = await prisma.child.findMany({
-    where: { parentId: session.user.id },
-    orderBy: { createdAt: "asc" },
-    include: { _count: { select: { letters: true } } },
-  });
+  const [children, sharedChildren] = await Promise.all([
+    prisma.child.findMany({
+      where: { parentId: session.user.id },
+      orderBy: { createdAt: "asc" },
+      include: { _count: { select: { letters: true } } },
+    }),
+    // Children other parents have shared with this user.
+    prisma.child.findMany({
+      where: { shares: { some: { parentId: session.user.id } } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, avatar: true, parent: { select: { name: true } } },
+    }),
+  ]);
 
   return (
     <>
@@ -79,6 +87,30 @@ export default async function ChildrenPage() {
             )}
           </section>
         </div>
+
+        {sharedChildren.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-1 text-lg font-bold text-sea-800">
+              Shared with you
+            </h2>
+            <p className="mb-3 text-sm text-sea-600">
+              Kids another parent has invited you to write to.
+            </p>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {sharedChildren.map((child) => (
+                <li key={child.id} className="card flex items-center gap-4">
+                  <span className="text-4xl">{child.avatar}</span>
+                  <div className="flex-1">
+                    <p className="font-bold text-sea-800">{child.name}</p>
+                    <p className="text-xs text-sea-500">
+                      Shared by {child.parent.name ?? "another parent"}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </>
   );

@@ -16,6 +16,9 @@ theme. Deploys cleanly to **Vercel**.
 - 🗓️ Time-lock: a letter stays sealed until its delivery date, then unlocks
 - 🌊 Dashboard of your bottles with a live countdown to each opening
 - 🗑️ Delete letters you own (ownership enforced on every read/write)
+- 🔗 Share a child with a co-parent via an invite link — they sign in (creating
+  an account if needed), accept, and can then write their own letters to that
+  child too
 
 ## Getting started
 
@@ -72,18 +75,38 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Project structure
 
 ```
-prisma/schema.prisma        Database models (User, Account, Session, Letter, Photo)
+prisma/schema.prisma        Database models (User, Child, Letter, Photo, sharing)
 src/auth.ts                 Auth.js configuration (Google + Prisma adapter)
 src/lib/prisma.ts           Prisma client singleton
 src/lib/letters.ts          Time-lock + date/countdown helpers
-src/app/actions.ts          Server actions: createLetter, deleteLetter
+src/lib/children.ts         Accessible-children helpers (owned + shared)
+src/app/actions.ts          Server actions: letters, children, and sharing
 src/app/api/upload/route.ts Photo upload endpoint (Vercel Blob)
 src/app/page.tsx            Landing page
 src/app/dashboard/          List of the signed-in user's bottles
+src/app/children/           Manage your kids (and see ones shared with you)
+src/app/share/              Invite a co-parent and manage shared access
+src/app/invite/[token]/     Accept a share invite (signs in if needed)
 src/app/letters/new/        Write-a-letter form
 src/app/letters/[id]/       View a letter (locked until its delivery date)
-src/components/             UI: header, auth buttons, bottle illustration, form
+src/components/             UI: header, auth buttons, bottle illustration, forms
 ```
+
+## Sharing access with a co-parent
+
+A child is owned by the parent who created it. From the **Share** page you pick
+which of your kids to share and generate an invite link. Sharing works like so:
+
+1. The link carries a random, unguessable token (`ShareInvite`).
+2. The other parent opens it. If they aren't signed in, signing in with Google
+   creates their account, then returns them to the invite to accept.
+3. Accepting creates a `ChildShare` grant, after which the co-parent can address
+   letters to that child — each parent still owns and sees only their own
+   letters. The child seeing both parents' letters at once is a future
+   child-view feature.
+
+Owners stay in control: they can cancel a pending invite or remove a co-parent's
+access at any time from the Share page.
 
 ## A note on the time-lock
 

@@ -1,19 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { LetterForm } from "@/components/letter-form";
+import { getAccessibleChildren } from "@/lib/children";
 
 export default async function NewLetter() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const children = await prisma.child.findMany({
-    where: { parentId: session.user.id },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, avatar: true },
-  });
+  const children = await getAccessibleChildren(session.user.id);
 
   return (
     <>
