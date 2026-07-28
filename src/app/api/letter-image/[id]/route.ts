@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { canAccessChild } from "@/lib/children";
 import { hasReachedOpenAge } from "@/lib/age";
 import { getLetterImage } from "@/lib/letter-image-store";
 import { openBottleBypass } from "@/flags";
@@ -27,7 +26,6 @@ export async function GET(
       letter: {
         select: {
           status: true,
-          childId: true,
           child: {
             select: { openToken: true, birthday: true, openAtAge: true },
           },
@@ -62,7 +60,6 @@ type ImageRecord = {
   authorId: string;
   letter: {
     status: string;
-    childId: string | null;
     child: {
       openToken: string | null;
       birthday: Date;
@@ -78,19 +75,12 @@ async function isAuthorized(
   const session = await auth();
   const viewerId = session?.user?.id;
 
-  // 1. The author, who may be mid-draft.
+  // 1. The author, who may be mid-draft. With sharing gone the author is
+  //    always the child's owner too, so this one check covers every parent
+  //    who may see the photo.
   if (viewerId && viewerId === image.authorId) return true;
 
-  // 2. The owner of the child this letter is addressed to. Now that sharing is
-  //    gone the author always *is* the owner, so this can only still fire for
-  //    letters written to someone else's child under the old shared-access
-  //    model. Kept deliberately: it fails closed for those rows rather than
-  //    handing them to whoever asks.
-  if (viewerId && image.letter?.childId) {
-    if (await canAccessChild(viewerId, image.letter.childId)) return true;
-  }
-
-  // 3. The child, holding their own open link.
+  // 2. The child, holding their own open link.
   return await childMayRead(request, image);
 }
 

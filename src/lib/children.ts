@@ -30,15 +30,3 @@ export type LetterChildOption = Omit<AccessibleChild, "photo">;
 export function withoutPhotos(children: AccessibleChild[]): LetterChildOption[] {
   return children.map(({ photo: _photo, ...rest }) => rest);
 }
-
-// True when the user owns this child, and so may write letters to them.
-export async function canAccessChild(
-  userId: string,
-  childId: string,
-): Promise<boolean> {
-  const child = await prisma.child.findFirst({
-    where: { id: childId, parentId: userId },
-    select: { id: true },
-  });
-  return Boolean(child);
-}

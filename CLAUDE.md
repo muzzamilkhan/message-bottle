@@ -109,8 +109,8 @@ reset. Successful actions call `revalidatePath` on each affected route before re
 
 1. **Parent (authenticated).** Ownership is `Child.parentId`, and it is the whole model:
    a child belongs to exactly one parent, who alone may address letters to them, edit
-   them, or delete them. Read children through `getAccessibleChildren` / `canAccessChild`
-   in `src/lib/children.ts` rather than querying `parentId` inline.
+   them, or delete them. Read children through `getAccessibleChildren` in
+   `src/lib/children.ts` rather than querying `parentId` inline.
 
    There is deliberately **no sharing between parents**. It existed once (`ChildShare`,
    `ShareInvite`) and was removed: a co-parent's letter photos lived under a child they
@@ -143,8 +143,9 @@ present, so normal opens cost no flag lookup.
 
 Letter bodies may contain `[[img:<id>]]` markers referencing `LetterImage` rows. The bytes
 live in a **private** Vercel Blob store — unreadable by URL — and are served only by
-`/api/letter-image/[id]`, which authorizes every request as the author, the owner of the
-child, or the child themselves via `openToken` **after the age gate passes**.
+`/api/letter-image/[id]`, which authorizes every request as the author — who, with sharing
+gone, is always the child's owner — or as the child themselves via `openToken` **after the
+age gate passes**.
 The time lock covers photos exactly as it covers text.
 
 Uploading is gated on `User.subscription` through `canUploadImages`; **reading never is**,
