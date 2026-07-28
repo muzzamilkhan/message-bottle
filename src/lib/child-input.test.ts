@@ -252,6 +252,35 @@ describe("parseChildInput", () => {
         false,
       );
     });
+
+    it("stores the trimmed photo, not the raw submitted value", () => {
+      // Whitespace-padded but otherwise identical to `photo`. If the
+      // implementation ever stored `raw.photo` instead of the trimmed,
+      // validated copy, this would catch it: the padded string was never
+      // passed through parsePhotoDataUrl, so persisting it would be exactly
+      // the untrimmed/unvalidated regression the Task 2 security review
+      // flagged.
+      const result = parseChildInput(
+        { ...base, photo: `  ${photo}  `, photoAction: "set" },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(result.ok && result.value.photo, photo);
+    });
+
+    it("checks the name before validating the photo", () => {
+      // A missing name and an invalid photo both fail — the name check must
+      // win, so a bad photo can never mask a missing name.
+      const result = parseChildInput(
+        {
+          ...base,
+          name: "",
+          photo: "https://example.com/cat.png",
+          photoAction: "set",
+        },
+        new Date("2024-01-01T12:00:00Z"),
+      );
+      assert.equal(!result.ok && result.error, "NAME_REQUIRED");
+    });
   });
 
   describe("echoed values", () => {
