@@ -1,38 +1,66 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { createChild, type ChildFormState } from "@/app/actions";
+import {
+  createChild,
+  updateChild,
+  type ChildFormState,
+} from "@/app/actions";
 import { CHILD_AVATARS, DEFAULT_AVATAR } from "@/lib/avatars";
 
-export function ChildForm() {
+export type EditableChild = {
+  id: string;
+  name: string;
+  avatar: string;
+  // Full calendar date as yyyy-mm-dd, or null.
+  birthday: string | null;
+  openAtAge: number | null;
+};
+
+export function ChildForm({
+  child,
+  onSaved,
+}: {
+  // When provided, the form edits this child instead of creating a new one.
+  child?: EditableChild;
+  onSaved?: () => void;
+}) {
+  const editing = Boolean(child);
   const [state, formAction] = useActionState<ChildFormState, FormData>(
-    createChild,
+    editing ? updateChild : createChild,
     {},
   );
-  const [avatar, setAvatar] = useState<string>(DEFAULT_AVATAR);
+  const [avatar, setAvatar] = useState<string>(child?.avatar ?? DEFAULT_AVATAR);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // On a successful create, clear the form for the next child. On a successful
+  // edit, let the parent card collapse itself.
+  useEffect(() => {
+    if (!state.ok) return;
+    if (editing) {
+      onSaved?.();
+    } else {
+      formRef.current?.reset();
+      setAvatar(DEFAULT_AVATAR);
+    }
+  }, [state.ok, editing, onSaved]);
+
   return (
-    <form
-      ref={formRef}
-      action={(fd) => {
-        formAction(fd);
-        formRef.current?.reset();
-        setAvatar(DEFAULT_AVATAR);
-      }}
-      className="card space-y-4"
-    >
+    <form ref={formRef} action={formAction} className="card space-y-4">
+      {child && <input type="hidden" name="id" value={child.id} />}
+
       <div>
-        <label htmlFor="name" className="field-label">
+        <label htmlFor={`name-${child?.id ?? "new"}`} className="field-label">
           Child&apos;s name
         </label>
         <input
-          id="name"
+          id={`name-${child?.id ?? "new"}`}
           name="name"
           className="field-input"
           placeholder="Ada"
           maxLength={80}
+          defaultValue={child?.name}
           required
         />
       </div>
@@ -61,15 +89,53 @@ export function ChildForm() {
       </div>
 
       <div>
-        <label htmlFor="birthday" className="field-label">
-          Birthday (optional)
+        <label
+          htmlFor={`birthday-${child?.id ?? "new"}`}
+          className="field-label"
+        >
+          Birthday
         </label>
         <input
-          id="birthday"
+          id={`birthday-${child?.id ?? "new"}`}
           name="birthday"
           type="date"
           className="field-input"
+          defaultValue={child?.birthday ?? undefined}
+          max={new Date().toISOString().slice(0, 10)}
         />
+        <p className="mt-1 text-xs text-sea-500">
+          Pick the full date — the bottle timer counts the years from it.
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor={`openAtAge-${child?.id ?? "new"}`}
+          className="field-label"
+        >
+          🍾 Bottle timer (optional)
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            id={`openAtAge-${child?.id ?? "new"}`}
+            name="openAtAge"
+            type="number"
+            min={1}
+            max={150}
+            step={1}
+            inputMode="numeric"
+            className="field-input w-28"
+            placeholder="18"
+            defaultValue={child?.openAtAge ?? undefined}
+          />
+          <span className="text-sm text-sea-600">
+            years old before they can open their bottles
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-sea-500">
+          They&apos;ll get a private link that unlocks the day they reach this
+          age. Must be older than they are now.
+        </p>
       </div>
 
       {state.error && (
@@ -78,20 +144,37 @@ export function ChildForm() {
         </p>
       )}
 
-      <AddButton />
+      <div className="flex items-center gap-3">
+        <SubmitButton editing={editing} />
+        {editing && (
+          <button
+            type="button"
+            onClick={onSaved}
+            className="text-sm font-semibold text-sea-500 hover:text-sea-700"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }
 
-function AddButton() {
+function SubmitButton({ editing }: { editing: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
-      className="btn-primary w-full disabled:opacity-60"
+      className="btn-primary disabled:opacity-60"
     >
-      {pending ? "Adding…" : "➕ Add child"}
+      {editing
+        ? pending
+          ? "Saving…"
+          : "💾 Save changes"
+        : pending
+          ? "Adding…"
+          : "➕ Add child"}
     </button>
   );
 }
