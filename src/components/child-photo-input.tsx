@@ -119,16 +119,26 @@ export function ChildPhotoInput({
     if (!file) return;
     setBusy(true);
     setError(null);
-    const result = await compressToDataUrl(file);
-    setBusy(false);
-    // Let the same file be picked again after an error.
-    if (fileRef.current) fileRef.current.value = "";
-    if (!result.ok) {
-      setError(childPhotoMessage(result.error));
-      return;
+    try {
+      // compressToDataUrl enumerates its failures as {ok:false}, but this
+      // code has never run in a browser during implementation — an
+      // unenumerated throw (FileReader rejecting, drawImage raising a
+      // security error) is still possible, and without a catch it would
+      // leave the button stuck on "Shrinking…" forever.
+      const result = await compressToDataUrl(file);
+      if (!result.ok) {
+        setError(childPhotoMessage(result.error));
+        return;
+      }
+      setPhoto(result.dataUrl);
+      setTouched(true);
+    } catch {
+      setError(childPhotoMessage("PHOTO_MALFORMED"));
+    } finally {
+      setBusy(false);
+      // Let the same file be picked again after an error.
+      if (fileRef.current) fileRef.current.value = "";
     }
-    setPhoto(result.dataUrl);
-    setTouched(true);
   }
 
   function remove() {
