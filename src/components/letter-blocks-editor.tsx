@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { LetterBlock } from "@/lib/letter-blocks";
 import { IMAGES_PER_LETTER } from "@/lib/letter-image";
+import { LetterFormatToolbar } from "@/components/letter-format-toolbar";
 import { LetterPhotoBlock } from "@/components/letter-photo-block";
-import { LetterSelectionToolbar } from "@/components/letter-selection-toolbar";
 import { LetterTextBlock } from "@/components/letter-text-block";
 import {
   useLetterImageUpload,
@@ -42,9 +42,6 @@ export function LetterBlocksEditor({
   const { busy, error, upload } = useLetterImageUpload({ letterId });
   const [uploaded, setUploaded] = useState<DraftImage[]>([]);
   const [showUpsell, setShowUpsell] = useState(false);
-  const [toolbar, setToolbar] = useState<{ top: number; left: number } | null>(
-    null,
-  );
   // Where a photo should land: the index after the text block last focused.
   const insertAt = useRef<number | null>(null);
 
@@ -108,34 +105,6 @@ export function LetterBlocksEditor({
     onChange(next);
   }
 
-  // Track the selection so the toolbar can follow it.
-  useEffect(() => {
-    function onSelectionChange() {
-      const selection = document.getSelection();
-      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-        setToolbar(null);
-        return;
-      }
-      const range = selection.getRangeAt(0);
-      // Only inside this editor's text blocks — a selection elsewhere on the
-      // page is none of our business.
-      const container =
-        range.commonAncestorContainer.nodeType === 1
-          ? (range.commonAncestorContainer as Element)
-          : range.commonAncestorContainer.parentElement;
-      if (!container?.closest("[data-letter-text-block]")) {
-        setToolbar(null);
-        return;
-      }
-      const rect = range.getBoundingClientRect();
-      setToolbar({ top: rect.top - 8, left: rect.left + rect.width / 2 });
-    }
-
-    document.addEventListener("selectionchange", onSelectionChange);
-    return () =>
-      document.removeEventListener("selectionchange", onSelectionChange);
-  }, []);
-
   // execCommand is formally deprecated but implemented everywhere, and it
   // handles caret and selection restoration correctly. Hand-rolled Range
   // surgery is more code and more edge cases for no gain at this size.
@@ -175,6 +144,10 @@ export function LetterBlocksEditor({
   return (
     <div>
       <div className="field-input min-h-48 space-y-1">
+        <LetterFormatToolbar
+          onBold={() => format("bold")}
+          onItalic={() => format("italic")}
+        />
         {keyed.map(({ key, block }, index) => {
           if (block.kind === "photo") {
             const image = known.get(block.id);
@@ -267,12 +240,6 @@ export function LetterBlocksEditor({
           {error}
         </p>
       )}
-
-      <LetterSelectionToolbar
-        position={toolbar}
-        onBold={() => format("bold")}
-        onItalic={() => format("italic")}
-      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   PHOTO_MIME_TYPES,
   PHOTO_QUALITY_LADDER,
   PHOTO_SIZE,
+  shrinkLadder,
   type ChildPhotoError,
 } from "@/lib/child-photo";
 
@@ -69,22 +70,50 @@ export async function compressToDataUrl(file: File): Promise<CompressResult> {
       sourceRect = { sx: 0, sy: 0, sw: step, sh: step };
     }
 
-    // Try each quality, stopping at the first encode under the cap.
-    for (const quality of PHOTO_QUALITY_LADDER) {
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/webp", quality),
-      );
-      if (!blob) continue;
-      if (!(PHOTO_MIME_TYPES as readonly string[]).includes(blob.type)) continue;
-      if (blob.size > PHOTO_MAX_BYTES) continue;
-      return { ok: true, dataUrl: await blobToDataUrl(blob) };
+    // Encode at 160px and try each quality; the first result under the cap
+    // wins. If even the lowest quality overshoots, the photo is too dense to
+    // fit at this size, so drop to a smaller square and try again. Each rung
+    // redraws from the previous one, and the ladder's floor guarantees this
+    // terminates — a real photo lands on the first rung, so nothing shrinks
+    // past the stored size.
+    for (const size of shrinkLadder(PHOTO_SIZE)) {
+      if (size !== canvas.width) {
+        canvas = drawSquare(canvas, size);
+      }
+      for (const quality of PHOTO_QUALITY_LADDER) {
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/webp", quality),
+        );
+        if (!blob) continue;
+        if (!(PHOTO_MIME_TYPES as readonly string[]).includes(blob.type)) {
+          continue;
+        }
+        if (blob.size > PHOTO_MAX_BYTES) continue;
+        return { ok: true, dataUrl: await blobToDataUrl(blob) };
+      }
     }
 
-    // Even the lowest quality overshot. Say so rather than degrading further.
+    // The shrink floor is small enough this is effectively unreachable for a
+    // real photo, but the type still needs an answer.
     return { ok: false, error: "PHOTO_TOO_LARGE" };
   } finally {
     bitmap.close();
   }
+}
+
+// Redraw a square canvas down to a smaller square with high-quality smoothing.
+// Used only by the byte-cap fallback, once the crop-and-downscale pass has
+// already produced a square source.
+function drawSquare(source: HTMLCanvasElement, size: number): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas unavailable");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, size, size);
+  return canvas;
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {

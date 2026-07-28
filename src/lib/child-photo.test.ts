@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { coverCrop, downscaleSteps, PHOTO_SIZE } from "./child-photo.ts";
+import {
+  coverCrop,
+  downscaleSteps,
+  PHOTO_MIN_SIZE,
+  PHOTO_SIZE,
+  shrinkLadder,
+} from "./child-photo.ts";
 
 test("PHOTO_SIZE is the 160px square the spec fixes", () => {
   assert.equal(PHOTO_SIZE, 160);
@@ -67,6 +73,30 @@ test("downscaleSteps", async (t) => {
 
   await t.test("returns a single no-op step when already at target", () => {
     assert.deepEqual(downscaleSteps(160), [160]);
+  });
+});
+
+test("shrinkLadder", async (t) => {
+  await t.test("starts at the stored size so a fitting photo never shrinks", () => {
+    assert.equal(shrinkLadder(PHOTO_SIZE)[0], PHOTO_SIZE);
+  });
+
+  await t.test("defaults its start to the stored size", () => {
+    assert.deepEqual(shrinkLadder(), shrinkLadder(PHOTO_SIZE));
+  });
+
+  await t.test("steps down until it lands exactly on the floor", () => {
+    const steps = shrinkLadder(PHOTO_SIZE);
+    for (const [i, step] of steps.entries()) {
+      if (i === 0) continue;
+      assert.ok(step < steps[i - 1], `rung ${step} must shrink from ${steps[i - 1]}`);
+      assert.ok(step >= PHOTO_MIN_SIZE, `rung ${step} must not pass the floor`);
+    }
+    assert.equal(steps.at(-1), PHOTO_MIN_SIZE);
+  });
+
+  await t.test("is a single rung when the size is already at the floor", () => {
+    assert.deepEqual(shrinkLadder(PHOTO_MIN_SIZE), [PHOTO_MIN_SIZE]);
   });
 });
 

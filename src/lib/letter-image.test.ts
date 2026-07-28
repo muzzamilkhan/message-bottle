@@ -5,7 +5,9 @@ import {
   fitDimensions,
   IMAGE_MAX_BYTES,
   IMAGE_MAX_DIMENSION,
+  IMAGE_MIN_DIMENSION,
   letterImageMessage,
+  shrinkLadder,
   staleImages,
   validateUpload,
   type LetterImageError,
@@ -58,6 +60,40 @@ describe("downscaleSteps", () => {
 
   it("defaults to the max dimension", () => {
     assert.deepEqual(downscaleSteps(4000), downscaleSteps(4000, IMAGE_MAX_DIMENSION));
+  });
+});
+
+describe("shrinkLadder", () => {
+  it("starts at the fit size so a fitting photo never shrinks further", () => {
+    assert.equal(shrinkLadder(1280)[0], 1280);
+  });
+
+  it("defaults its start to the max dimension", () => {
+    assert.deepEqual(shrinkLadder(), shrinkLadder(IMAGE_MAX_DIMENSION));
+  });
+
+  it("steps down by ~15% each rung", () => {
+    const steps = shrinkLadder(1280);
+    for (const [i, step] of steps.entries()) {
+      if (i === 0) continue;
+      assert.ok(step < steps[i - 1], `rung ${step} must shrink from ${steps[i - 1]}`);
+      // Each rung is a 0.85 multiple, so never below 0.84x of the previous.
+      assert.ok(step >= Math.floor(steps[i - 1] * 0.84));
+    }
+  });
+
+  it("never goes below the floor and always terminates there", () => {
+    const steps = shrinkLadder(1280);
+    for (const step of steps) assert.ok(step >= IMAGE_MIN_DIMENSION);
+    assert.equal(steps.at(-1), IMAGE_MIN_DIMENSION);
+  });
+
+  it("is a single rung when the fit size is already at the floor", () => {
+    assert.deepEqual(shrinkLadder(IMAGE_MIN_DIMENSION), [IMAGE_MIN_DIMENSION]);
+  });
+
+  it("clamps a fit size below the floor up to the floor", () => {
+    assert.deepEqual(shrinkLadder(200), [IMAGE_MIN_DIMENSION]);
   });
 });
 
