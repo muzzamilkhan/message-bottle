@@ -21,7 +21,11 @@ export default async function EditDraftPage({
 
   const letter = await prisma.letter.findUnique({
     where: { id },
-    include: { _count: { select: { images: true } } },
+    include: {
+      _count: { select: { images: true } },
+      // For the editor's photo strip: which marker is which photo.
+      images: { select: { id: true, width: true, height: true } },
+    },
   });
 
   if (
@@ -66,6 +70,7 @@ export default async function EditDraftPage({
           childOptions={childOptionsWithoutPhotos}
           lockedChild={lockedChild}
           canUploadImages={canUploadImages(author?.subscription)}
+          existingImages={letter.images}
           letter={{
             id: letter.id,
             title: letter.title,

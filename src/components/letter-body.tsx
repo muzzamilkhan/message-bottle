@@ -78,7 +78,11 @@ function LetterImage({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
-      alt=""
+      // A photograph is content, not decoration, so never alt="". There is no
+      // caption field in the data model, so this is generic but honest.
+      // ("photo" itself is out: jsx-a11y/img-redundant-alt — a screen reader
+      // already announces that this is an image.)
+      alt="Included with this letter"
       width={image.width}
       height={image.height}
       // Full width of the letter column, with the stored size setting the

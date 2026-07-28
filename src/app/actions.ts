@@ -57,6 +57,8 @@ export async function saveLetter(
     select: { subscription: true },
   });
 
+  const referencedImageIds = letterImageIds(rawBody);
+
   const parsed = parseLetterInput(
     {
       title: String(formData.get("title") ?? ""),
@@ -65,8 +67,9 @@ export async function saveLetter(
     },
     parseLetterIntent(String(formData.get("intent") ?? "")),
     {
-      hasImages: letterImageIds(rawBody).length > 0,
+      hasImages: referencedImageIds.length > 0,
       mayHoldImages: canUploadImages(author?.subscription),
+      imageCount: referencedImageIds.length,
     },
   );
   if (!parsed.ok) return { error: letterInputMessage(parsed.error) };
@@ -265,13 +268,11 @@ async function reconcileLetterImageRows(
   tx: Prisma.TransactionClient,
   input: { letterId: string; authorId: string; body: string },
 ): Promise<{ id: string; pathname: string }[]> {
-  // The cap applies here too: pasting many markers into a body must not be
-  // able to claim more than IMAGES_PER_LETTER images, even if each one was
-  // individually uploaded under the per-upload check.
-  const referenced = [...new Set(letterImageIds(input.body))].slice(
-    0,
-    IMAGES_PER_LETTER,
-  );
+  // The body is the single authority on what is referenced. The cap is
+  // enforced upstream by parseLetterInput, which rejects an over-cap save
+  // outright — so nothing here needs to trim, and the parser and reconciliation
+  // can never disagree about what "referenced" means.
+  const referenced = letterImageIds(input.body);
 
   // Claim rows uploaded for this letter before it had an id. Only ids the body
   // actually references, so an abandoned upload stays unattached and is swept.
@@ -425,20 +426,28 @@ export async function deleteChild(formData: FormData): Promise<void> {
 
   // Every letter written to this child, from every co-parent, drafts and
   // sealed alike — and the photos inside them.
-  const images = await prisma.letterImage.findMany({
-    where: { letter: { childId: child.id } },
-    select: { pathname: true },
+  //
+  // The pathnames are collected inside the same transaction that deletes the
+  // letters, so the list is taken from the same snapshot the delete acts on. A
+  // co-parent attaching an image to one of these letters concurrently either
+  // lands before the snapshot (and is collected) or after the delete (and has
+  // no letter to attach to) — it can't slip between the two and leave its blob
+  // orphaned in storage.
+  const pathnames = await prisma.$transaction(async (tx) => {
+    const images = await tx.letterImage.findMany({
+      where: { letter: { childId: child.id } },
+      select: { pathname: true },
+    });
+    // The rows go with the letters, by cascade.
+    await tx.letter.deleteMany({ where: { childId: child.id } });
+    await tx.child.delete({ where: { id: child.id } });
+    return images.map((image) => image.pathname);
   });
 
-  // Blobs first, then rows. A failure after this leaves rows pointing at
-  // missing images; the other order would leave photographs of a child in
-  // storage after their parent deleted them.
-  await deleteLetterImages(images.map((image) => image.pathname));
-
-  await prisma.$transaction([
-    prisma.letter.deleteMany({ where: { childId: child.id } }),
-    prisma.child.delete({ where: { id: child.id } }),
-  ]);
+  // Blob deletion is a network call and never belongs inside a transaction, so
+  // it runs after the commit. A failure here leaves blobs with no rows pointing
+  // at them — unreachable, and swept later — which is the safe direction.
+  await deleteLetterImages(pathnames);
 
   revalidatePath("/children");
   revalidatePath("/dashboard");

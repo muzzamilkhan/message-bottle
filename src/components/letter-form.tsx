@@ -4,7 +4,10 @@ import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveLetter, type LetterFormState } from "@/app/actions";
 import { ChildAvatar } from "@/components/child-avatar";
-import { LetterImageInput } from "@/components/letter-image-input";
+import {
+  LetterImageInput,
+  type DraftImage,
+} from "@/components/letter-image-input";
 import type { LetterChildOption } from "@/lib/children";
 
 type ExistingLetter = {
@@ -19,6 +22,7 @@ export function LetterForm({
   letter,
   lockedChild,
   canUploadImages,
+  existingImages = [],
 }: {
   childOptions: LetterChildOption[];
   letter?: ExistingLetter;
@@ -27,6 +31,9 @@ export function LetterForm({
   lockedChild?: { id: string; name: string; avatar: string; photo: string | null };
   // Whether this author's subscription covers photos. The server checks again.
   canUploadImages: boolean;
+  // The photos this draft already holds, so the strip can show them. A new
+  // letter has none.
+  existingImages?: DraftImage[];
 }) {
   const [state, formAction] = useActionState<LetterFormState, FormData>(
     saveLetter,
@@ -138,6 +145,7 @@ export function LetterForm({
           letterId={letter?.id}
           canUpload={canUploadImages}
           body={body}
+          existingImages={existingImages}
           onInsert={insertMarker}
         />
       </div>

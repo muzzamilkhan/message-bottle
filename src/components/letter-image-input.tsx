@@ -66,10 +66,14 @@ async function compress(
   throw new Error("IMAGE_TOO_LARGE");
 }
 
+// An image this draft already holds, or one uploaded during this session.
+export type DraftImage = { id: string; width: number; height: number };
+
 export function LetterImageInput({
   letterId,
   canUpload,
   body,
+  existingImages,
   onInsert,
 }: {
   letterId?: string;
@@ -78,15 +82,31 @@ export function LetterImageInput({
   canUpload: boolean;
   // The current body, so the strip can count what's already referenced.
   body: string;
+  // The images already saved against this draft. A new letter has none.
+  existingImages: DraftImage[];
   onInsert: (marker: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpsell, setShowUpsell] = useState(false);
+  // Images uploaded during this editing session. Merged with the saved ones so
+  // a photo appears in the strip immediately, without waiting for a save.
+  const [uploaded, setUploaded] = useState<DraftImage[]>([]);
 
-  const used = letterImageIds(body).length;
+  const referenced = letterImageIds(body);
+  const used = referenced.length;
   const full = used >= IMAGES_PER_LETTER;
+
+  // The body decides which photos show and in what order — the same parser the
+  // renderer and reconciliation use, so the strip can't drift from the letter.
+  // An upload the parent then deleted the marker for simply drops out.
+  const known = new Map(
+    [...existingImages, ...uploaded].map((image) => [image.id, image]),
+  );
+  const thumbnails = referenced
+    .map((id) => known.get(id))
+    .filter((image): image is DraftImage => image !== undefined);
 
   async function onPick(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -111,12 +131,15 @@ export function LetterImageInput({
       if (letterId) data.set("letterId", letterId);
 
       const result: LetterImageState = await uploadLetterImage({}, data);
-      if (result.error || !result.image) {
+      const image = result.image;
+      if (result.error || !image) {
         setError(result.error ?? letterImageMessage("IMAGE_MALFORMED"));
         return;
       }
+      // Show it in the strip straight away, before any save.
+      setUploaded((current) => [...current, image]);
       // Built by the same module that parses it, so the two can't drift.
-      onInsert(imageMarker(result.image.id));
+      onInsert(imageMarker(image.id));
     } catch {
       setError(letterImageMessage("IMAGE_TOO_LARGE"));
     } finally {
@@ -165,6 +188,29 @@ export function LetterImageInput({
           ? `That's all ${IMAGES_PER_LETTER} photos for this letter.`
           : `Photos sit where the marker lands. ${used}/${IMAGES_PER_LETTER} used.`}
       </p>
+      {thumbnails.length > 0 && (
+        // Markers are opaque cuids, so without these the parent has no way to
+        // tell which marker is which photo before sealing the letter forever.
+        <div className="mt-3 flex flex-wrap gap-2">
+          {thumbnails.map((image) => (
+            // Plain <img>, not next/image: the route is authorized per-request
+            // and returns no-store, so there is nothing for the optimizer to
+            // fetch or cache. No token here — this is the author's own view and
+            // the route authorizes them by session.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={image.id}
+              src={`/api/letter-image/${image.id}`}
+              // Content, not decoration. The word "photo" is out here for the
+              // same jsx-a11y/img-redundant-alt reason as in letter-body.tsx.
+              alt="Included in your letter"
+              width={image.width}
+              height={image.height}
+              className="h-16 w-auto rounded-xl"
+            />
+          ))}
+        </div>
+      )}
       {error && (
         <p className="mt-2 rounded-2xl bg-blush-200 px-4 py-3 text-sm font-semibold text-blush-500">
           {error}

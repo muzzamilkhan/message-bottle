@@ -5,12 +5,13 @@ import {
   parseLetterInput,
   parseLetterIntent,
 } from "./letter-input.ts";
+import { IMAGES_PER_LETTER } from "./letter-image.ts";
 
 const complete = { title: "For your 18th", childId: "child_1", body: "Hello!" };
 
 // Default context: the author may hold images and this letter has none. Cases
 // about the Pro rule pass their own.
-const anyone = { hasImages: false, mayHoldImages: true };
+const anyone = { hasImages: false, mayHoldImages: true, imageCount: 0 };
 
 describe("parseLetterIntent", () => {
   it("treats an explicit submit as sealing", () => {
@@ -101,6 +102,7 @@ describe("images and sealing", () => {
     const result = parseLetterInput(complete, "submit", {
       hasImages: true,
       mayHoldImages: true,
+      imageCount: 1,
     });
     assert.equal(result.ok, true);
   });
@@ -109,6 +111,7 @@ describe("images and sealing", () => {
     const result = parseLetterInput(complete, "submit", {
       hasImages: false,
       mayHoldImages: false,
+      imageCount: 0,
     });
     assert.equal(result.ok, true);
   });
@@ -118,6 +121,7 @@ describe("images and sealing", () => {
     const result = parseLetterInput(complete, "submit", {
       hasImages: true,
       mayHoldImages: false,
+      imageCount: 1,
     });
     assert.deepEqual(result, { ok: false, error: "SEND_IMAGES_NOT_ALLOWED" });
   });
@@ -128,6 +132,7 @@ describe("images and sealing", () => {
     const result = parseLetterInput(complete, "draft", {
       hasImages: true,
       mayHoldImages: false,
+      imageCount: 1,
     });
     assert.equal(result.ok, true);
   });
@@ -138,8 +143,66 @@ describe("images and sealing", () => {
     const result = parseLetterInput({ ...complete, body: "" }, "submit", {
       hasImages: true,
       mayHoldImages: false,
+      imageCount: 1,
     });
     assert.deepEqual(result, { ok: false, error: "SEND_INCOMPLETE" });
+  });
+});
+
+// The cap has to reject the save outright rather than let reconciliation
+// quietly redefine which markers count as referenced — silently dropping the
+// images past the cap would delete a parent's photograph for good.
+describe("the per-letter image cap", () => {
+  const complete = { title: "T", childId: "c1", body: "Hello" };
+  const holding = (imageCount: number) => ({
+    hasImages: imageCount > 0,
+    mayHoldImages: true,
+    imageCount,
+  });
+
+  for (const intent of ["draft", "submit"] as const) {
+    it(`accepts exactly ${IMAGES_PER_LETTER} images on ${intent}`, () => {
+      const result = parseLetterInput(
+        complete,
+        intent,
+        holding(IMAGES_PER_LETTER),
+      );
+      assert.equal(result.ok, true);
+    });
+
+    // A draft that can't be reconciled safely must not be saved at all.
+    it(`rejects one over the cap on ${intent}`, () => {
+      const result = parseLetterInput(
+        complete,
+        intent,
+        holding(IMAGES_PER_LETTER + 1),
+      );
+      assert.deepEqual(result, { ok: false, error: "TOO_MANY_IMAGES" });
+    });
+
+    it(`accepts a letter with no images on ${intent}`, () => {
+      const result = parseLetterInput(complete, intent, holding(0));
+      assert.equal(result.ok, true);
+    });
+  }
+
+  // Ordering still holds: an incomplete letter is incomplete first.
+  it("reports incompleteness before the cap", () => {
+    const result = parseLetterInput(
+      { ...complete, body: "" },
+      "submit",
+      holding(IMAGES_PER_LETTER + 1),
+    );
+    assert.deepEqual(result, { ok: false, error: "SEND_INCOMPLETE" });
+  });
+
+  it("reports a missing draft title before the cap", () => {
+    const result = parseLetterInput(
+      { ...complete, title: " " },
+      "draft",
+      holding(IMAGES_PER_LETTER + 1),
+    );
+    assert.deepEqual(result, { ok: false, error: "DRAFT_NEEDS_TITLE" });
   });
 });
 
@@ -149,6 +212,7 @@ describe("letterInputMessage", () => {
       "SEND_INCOMPLETE",
       "DRAFT_NEEDS_TITLE",
       "SEND_IMAGES_NOT_ALLOWED",
+      "TOO_MANY_IMAGES",
     ] as const) {
       assert.ok(letterInputMessage(code).length > 0, `${code} has no message`);
     }

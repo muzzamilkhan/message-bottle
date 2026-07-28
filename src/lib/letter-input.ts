@@ -2,6 +2,8 @@
 // testing: a draft only needs a title to be findable later, but sealing a
 // letter requires everything, because a SENT letter can never be edited.
 
+import { IMAGES_PER_LETTER } from "./letter-image.ts";
+
 export type LetterIntent = "draft" | "submit";
 
 export type LetterFormValues = {
@@ -13,7 +15,8 @@ export type LetterFormValues = {
 export type LetterInputError =
   | "SEND_INCOMPLETE"
   | "DRAFT_NEEDS_TITLE"
-  | "SEND_IMAGES_NOT_ALLOWED";
+  | "SEND_IMAGES_NOT_ALLOWED"
+  | "TOO_MANY_IMAGES";
 
 export type LetterInputResult =
   | { ok: true; value: LetterFormValues & { sealing: boolean } }
@@ -26,6 +29,12 @@ export type LetterImageContext = {
   hasImages: boolean;
   // Whether the author's subscription currently covers holding images.
   mayHoldImages: boolean;
+  // How many distinct images the submitted body references. The cap lives here
+  // rather than in reconciliation so an over-cap body is *rejected*, never
+  // quietly trimmed — trimming would leave the extra markers in the text while
+  // reconciliation deleted their blobs and rows as unreferenced, losing a
+  // photograph for good.
+  imageCount: number;
 };
 
 export function letterInputMessage(error: LetterInputError): string {
@@ -36,6 +45,8 @@ export function letterInputMessage(error: LetterInputError): string {
       return "Give your draft a title so you can find it later.";
     case "SEND_IMAGES_NOT_ALLOWED":
       return "This letter has photos, which are part of Pro. Remove them to seal it, or renew to keep them.";
+    case "TOO_MANY_IMAGES":
+      return `A letter can hold up to ${IMAGES_PER_LETTER} photos. Remove a few and try again.`;
   }
 }
 
@@ -66,6 +77,12 @@ export function parseLetterInput(
     }
   } else if (!title) {
     return { ok: false, error: "DRAFT_NEEDS_TITLE" };
+  }
+
+  // Applies to a draft save as much as to a seal: a body reconciliation can't
+  // handle safely must not reach the database at all.
+  if (context.imageCount > IMAGES_PER_LETTER) {
+    return { ok: false, error: "TOO_MANY_IMAGES" };
   }
 
   return { ok: true, value: { title, childId, body, sealing } };
