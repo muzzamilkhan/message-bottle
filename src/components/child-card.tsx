@@ -16,9 +16,48 @@ export type ChildCardData = EditableChild & {
 
 export function ChildCard({ child }: { child: ChildCardData }) {
   const [editing, setEditing] = useState(false);
+  // When true, the destructive-remove confirmation panel replaces the card.
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   if (editing) {
     return <ChildForm child={child} onSaved={() => setEditing(false)} />;
+  }
+
+  if (confirmingRemove) {
+    const letterWarning =
+      child.lettersCount > 0
+        ? `All ${child.lettersCount} letter${
+            child.lettersCount === 1 ? "" : "s"
+          } written to ${child.name} will be deleted forever`
+        : `Any letters written to ${child.name} will be deleted forever`;
+    return (
+      <li className="card space-y-4 ring-2 ring-blush-300">
+        <div>
+          <p className="text-sm font-semibold text-blush-500">
+            ⚠️ Remove {child.name}?
+          </p>
+          <p className="mt-2 text-sm text-sea-700">
+            {letterWarning}, and their private open link will stop working. This{" "}
+            <strong>can&apos;t be undone</strong>.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <form action={deleteChild} className="sm:flex-1">
+            <input type="hidden" name="id" value={child.id} />
+            <button type="submit" className="btn-primary w-full">
+              Yes, remove &amp; delete letters
+            </button>
+          </form>
+          <button
+            type="button"
+            onClick={() => setConfirmingRemove(false)}
+            className="btn-secondary"
+          >
+            Keep {child.name}
+          </button>
+        </div>
+      </li>
+    );
   }
 
   return (
@@ -40,15 +79,13 @@ export function ChildCard({ child }: { child: ChildCardData }) {
           >
             Edit
           </button>
-          <form action={deleteChild}>
-            <input type="hidden" name="id" value={child.id} />
-            <button
-              type="submit"
-              className="text-sm font-semibold text-sea-400 hover:text-blush-500"
-            >
-              Remove
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={() => setConfirmingRemove(true)}
+            className="text-sm font-semibold text-sea-400 hover:text-blush-500"
+          >
+            Remove
+          </button>
         </div>
       </div>
 
