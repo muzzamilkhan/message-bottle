@@ -39,3 +39,6 @@ next-env.d.ts
 # agent scratch space: checked-out worktrees and per-plan execution state
 /.claude/
 /.superpowers/
+
+# dev server output
+/dev.log
