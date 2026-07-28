@@ -79,6 +79,19 @@ export type LetterImageError =
   | "IMAGE_TOO_MANY"
   | "IMAGE_NOT_PRO";
 
+// Which of a letter's attached images its body no longer references.
+//
+// Plain values in, plain values out, so the highest-stakes deletion decision
+// in this feature is testable without a session or a database. Reconciliation
+// deletes exactly what this returns — blobs first, then rows.
+export function staleImages<T extends { id: string; pathname: string }>(
+  referenced: string[],
+  attached: T[],
+): T[] {
+  const ids = new Set(referenced);
+  return attached.filter((image) => !ids.has(image.id));
+}
+
 export type UploadValidation =
   | { ok: true }
   | { ok: false; error: LetterImageError };

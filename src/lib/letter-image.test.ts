@@ -6,6 +6,7 @@ import {
   IMAGE_MAX_BYTES,
   IMAGE_MAX_DIMENSION,
   letterImageMessage,
+  staleImages,
   validateUpload,
   type LetterImageError,
 } from "./letter-image.ts";
@@ -129,6 +130,40 @@ describe("validateUpload", () => {
       ok: false,
       error: "IMAGE_MALFORMED",
     });
+  });
+});
+
+describe("staleImages", () => {
+  const a = { id: "a", pathname: "letters/u/a.webp" };
+  const b = { id: "b", pathname: "letters/u/b.webp" };
+  const c = { id: "c", pathname: "letters/u/c.webp" };
+
+  it("treats everything as stale when nothing is referenced", () => {
+    assert.deepEqual(staleImages([], [a, b]), [a, b]);
+  });
+
+  it("keeps nothing stale when every attached image is referenced", () => {
+    assert.deepEqual(staleImages(["a", "b"], [a, b]), []);
+  });
+
+  it("returns only the attached images the body no longer references", () => {
+    assert.deepEqual(staleImages(["a"], [a, b, c]), [b, c]);
+  });
+
+  it("ignores a referenced id that isn't attached to this letter", () => {
+    assert.deepEqual(staleImages(["a", "does-not-exist"], [a, b]), [b]);
+  });
+
+  it("treats a duplicated referenced id the same as one occurrence", () => {
+    assert.deepEqual(staleImages(["a", "a"], [a, b]), [b]);
+  });
+
+  it("returns nothing for empty attached images", () => {
+    assert.deepEqual(staleImages(["a"], []), []);
+  });
+
+  it("returns nothing when both inputs are empty", () => {
+    assert.deepEqual(staleImages([], []), []);
   });
 });
 

@@ -3,6 +3,7 @@
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -22,6 +23,7 @@ import {
   IMAGE_MAX_UPLOAD_BYTES,
   IMAGES_PER_LETTER,
   letterImageMessage,
+  staleImages,
   validateUpload,
 } from "@/lib/letter-image";
 import {
@@ -100,28 +102,44 @@ export async function saveLetter(
   if (id) {
     // Only update the author's own letter, and only while it's still a draft —
     // a sent letter is sealed forever.
-    const result = await prisma.letter.updateMany({
-      where: { id, authorId: session.user.id, status: "DRAFT" },
-      data,
+    //
+    // The status flip to SENT and the image claim/stale-lookup must commit
+    // together: if the write landed but the claim never ran (a dropped
+    // connection, a function timeout), the letter would be sealed forever
+    // while its just-uploaded image sat unattached — and the orphan sweep,
+    // which only ever looks at unattached rows, would delete it 24h later out
+    // from under a letter nothing can reconcile again. Blob deletion is a
+    // network call and can't join a DB transaction, so it happens after this
+    // one commits, using the stale set the transaction decided on.
+    const staleToDelete = await prisma.$transaction(async (tx) => {
+      const result = await tx.letter.updateMany({
+        where: { id, authorId: session.user.id, status: "DRAFT" },
+        data,
+      });
+      if (result.count === 0) return null;
+      return reconcileLetterImageRows(tx, {
+        letterId: id,
+        authorId: session.user.id,
+        body: parsed.value.body,
+      });
     });
-    if (result.count === 0) {
+    if (staleToDelete === null) {
       return { error: "That draft can't be edited anymore." };
     }
-    await reconcileLetterImages({
-      letterId: id,
-      authorId: session.user.id,
-      body: parsed.value.body,
-    });
+    await deleteLetterImages(staleToDelete.map((image) => image.pathname));
   } else {
-    const created = await prisma.letter.create({
-      data: { ...data, authorId: session.user.id },
-      select: { id: true },
+    const stale = await prisma.$transaction(async (tx) => {
+      const created = await tx.letter.create({
+        data: { ...data, authorId: session.user.id },
+        select: { id: true },
+      });
+      return reconcileLetterImageRows(tx, {
+        letterId: created.id,
+        authorId: session.user.id,
+        body: parsed.value.body,
+      });
     });
-    await reconcileLetterImages({
-      letterId: created.id,
-      authorId: session.user.id,
-      body: parsed.value.body,
-    });
+    await deleteLetterImages(stale.map((image) => image.pathname));
   }
 
   revalidatePath("/dashboard");
@@ -189,6 +207,17 @@ export async function uploadLetterImage(
       return { error: letterImageMessage("IMAGE_TOO_MANY") };
     }
     attachedTo = letter.id;
+  } else {
+    // No letter yet — the common case for a brand-new draft. Without this,
+    // a client could upload without bound before any letter exists to cap
+    // against: each upload is a real blob sitting in the store for up to 24h,
+    // and an unmetered write against it besides.
+    const unattachedCount = await prisma.letterImage.count({
+      where: { authorId: session.user.id, letterId: null },
+    });
+    if (unattachedCount >= IMAGES_PER_LETTER) {
+      return { error: letterImageMessage("IMAGE_TOO_MANY") };
+    }
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -214,8 +243,10 @@ export async function uploadLetterImage(
   return { image };
 }
 
-// Delete images belonging to this letter that its body no longer references,
-// and claim any the author uploaded before the letter existed.
+// Claim rows uploaded for this letter before it had an id, and delete rows
+// (not blobs) for images the body no longer references — then hand back what
+// it deleted so the caller can remove those blobs after the transaction
+// commits.
 //
 // The body is the authority on what is referenced, so this is exact rather
 // than heuristic. It covers both "the author removed a marker" and "the author
@@ -223,20 +254,31 @@ export async function uploadLetterImage(
 //
 // Sealing runs this one last time; after that the letter's images are frozen
 // with it and nothing may touch them again.
-async function reconcileLetterImages(input: {
-  letterId: string;
-  authorId: string;
-  body: string;
-}): Promise<void> {
-  const referenced = new Set(letterImageIds(input.body));
+//
+// Runs inside the same transaction as the letter write that calls it: the
+// status flip to SENT and this claim/delete must commit together, or a
+// dropped connection between the two could seal a letter while its
+// just-uploaded image row was still unattached — and the orphan sweep, which
+// only looks at unattached rows, would delete it later out from under a
+// letter nothing can reconcile again.
+async function reconcileLetterImageRows(
+  tx: Prisma.TransactionClient,
+  input: { letterId: string; authorId: string; body: string },
+): Promise<{ id: string; pathname: string }[]> {
+  // The cap applies here too: pasting many markers into a body must not be
+  // able to claim more than IMAGES_PER_LETTER images, even if each one was
+  // individually uploaded under the per-upload check.
+  const referenced = [...new Set(letterImageIds(input.body))].slice(
+    0,
+    IMAGES_PER_LETTER,
+  );
 
   // Claim rows uploaded for this letter before it had an id. Only ids the body
   // actually references, so an abandoned upload stays unattached and is swept.
-  const unattached = [...referenced];
-  if (unattached.length > 0) {
-    await prisma.letterImage.updateMany({
+  if (referenced.length > 0) {
+    await tx.letterImage.updateMany({
       where: {
-        id: { in: unattached },
+        id: { in: referenced },
         authorId: input.authorId,
         letterId: null,
       },
@@ -244,51 +286,17 @@ async function reconcileLetterImages(input: {
     });
   }
 
-  const attached = await prisma.letterImage.findMany({
+  const attached = await tx.letterImage.findMany({
     where: { letterId: input.letterId },
     select: { id: true, pathname: true },
   });
-  const stale = attached.filter((image) => !referenced.has(image.id));
-  if (stale.length === 0) return;
+  const stale = staleImages(referenced, attached);
+  if (stale.length === 0) return [];
 
-  // Blobs first, then rows: a failure here leaves a row pointing at a missing
-  // image, which renders as a skipped photo. The other order would leave a
-  // photograph in storage with nothing referencing it.
-  await deleteLetterImages(stale.map((image) => image.pathname));
-  await prisma.letterImage.deleteMany({
+  await tx.letterImage.deleteMany({
     where: { id: { in: stale.map((image) => image.id) } },
   });
-}
-
-// How long an unattached image may sit before it counts as abandoned. Generous
-// on purpose: a parent may leave a half-written letter open overnight, and
-// nothing is user-visible during the window.
-const ORPHAN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-
-// Delete images uploaded for a letter that was never saved.
-//
-// Reconciliation handles every image whose letter got saved; this handles the
-// tab that was closed first, where no save ever ran. Rides on a page load that
-// already queries this author's letters — no cron, no scheduled function.
-//
-// Only ever touches unattached rows, so a sealed letter's images are out of
-// reach by construction.
-export async function sweepOrphanedImages(authorId: string): Promise<void> {
-  const orphans = await prisma.letterImage.findMany({
-    where: {
-      authorId,
-      letterId: null,
-      createdAt: { lt: new Date(Date.now() - ORPHAN_MAX_AGE_MS) },
-    },
-    select: { id: true, pathname: true },
-    take: 100,
-  });
-  if (orphans.length === 0) return;
-
-  await deleteLetterImages(orphans.map((image) => image.pathname));
-  await prisma.letterImage.deleteMany({
-    where: { id: { in: orphans.map((image) => image.id) } },
-  });
+  return stale;
 }
 
 export type ChildFormState = {

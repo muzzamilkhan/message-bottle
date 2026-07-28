@@ -6,7 +6,7 @@ import { Header } from "@/components/header";
 import { ChildAvatar } from "@/components/child-avatar";
 import { formatDate } from "@/lib/letters";
 import { getAccessibleChildren } from "@/lib/children";
-import { sweepOrphanedImages } from "@/app/actions";
+import { sweepOrphanedImages } from "@/lib/letter-images";
 
 export default async function Dashboard() {
   const session = await auth();
