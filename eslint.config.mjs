@@ -13,8 +13,16 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 export default tseslint.config(
   {
     ignores: [
+      // Build output and dependencies, at the root and anywhere below it.
+      // The `**/` forms matter because agent worktrees under .claude/ carry
+      // their own builds, and a root-anchored pattern doesn't reach them —
+      // ESLint doesn't read nested .gitignore files the way git does.
       ".next/**",
+      "**/.next/**",
       "node_modules/**",
+      "**/node_modules/**",
+      // Agent scratch space, including checked-out worktrees.
+      ".claude/**",
       "next-env.d.ts",
       "src/generated/**",
     ],
