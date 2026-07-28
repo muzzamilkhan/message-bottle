@@ -13,6 +13,7 @@ export type EditableChild = {
   id: string;
   name: string;
   avatar: string;
+  photo: string | null;
   // Full calendar date as yyyy-mm-dd, or null.
   birthday: string | null;
   openAtAge: number | null;

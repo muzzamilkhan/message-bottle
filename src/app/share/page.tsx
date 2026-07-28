@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { ShareForm } from "@/components/share-form";
+import { ChildAvatar } from "@/components/child-avatar";
 import { revokeInvite, revokeShare } from "@/app/actions";
 import { formatDate } from "@/lib/letters";
 
@@ -16,7 +17,7 @@ export default async function SharePage() {
     prisma.child.findMany({
       where: { parentId: userId },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, avatar: true },
+      select: { id: true, name: true, avatar: true, photo: true },
     }),
     prisma.shareInvite.findMany({
       where: { inviterId: userId, status: "PENDING" },
@@ -30,7 +31,7 @@ export default async function SharePage() {
       where: { child: { parentId: userId } },
       orderBy: { createdAt: "asc" },
       include: {
-        child: { select: { name: true, avatar: true } },
+        child: { select: { name: true, avatar: true, photo: true } },
         parent: { select: { name: true, email: true } },
       },
     }),
@@ -115,7 +116,11 @@ export default async function SharePage() {
                       key={share.id}
                       className="card flex items-center gap-4"
                     >
-                      <span className="text-3xl">{share.child.avatar}</span>
+                      <ChildAvatar
+                        child={share.child}
+                        name={share.child.name}
+                        size="md"
+                      />
                       <div className="flex-1">
                         <p className="font-bold text-sea-800">
                           {share.parent.name ?? share.parent.email ?? "A parent"}

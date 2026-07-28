@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { deleteChild } from "@/app/actions";
 import { ChildForm, type EditableChild } from "@/components/child-form";
+import { ChildAvatar } from "@/components/child-avatar";
 
 export type ChildCardData = EditableChild & {
   openToken: string | null;
@@ -63,7 +64,7 @@ export function ChildCard({ child }: { child: ChildCardData }) {
   return (
     <li className="card space-y-3">
       <div className="flex items-center gap-4">
-        <span className="text-4xl">{child.avatar}</span>
+        <ChildAvatar child={child} name={child.name} size="lg" />
         <div className="flex-1">
           <p className="font-bold text-sea-800">{child.name}</p>
           <p className="text-xs text-sea-500">

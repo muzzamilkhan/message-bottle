@@ -6,6 +6,7 @@ export type AccessibleChild = {
   id: string;
   name: string;
   avatar: string;
+  photo: string | null;
   owned: boolean;
 };
 
@@ -18,12 +19,12 @@ export async function getAccessibleChildren(
     prisma.child.findMany({
       where: { parentId: userId },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, avatar: true },
+      select: { id: true, name: true, avatar: true, photo: true },
     }),
     prisma.child.findMany({
       where: { shares: { some: { parentId: userId } } },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, avatar: true },
+      select: { id: true, name: true, avatar: true, photo: true },
     }),
   ]);
 

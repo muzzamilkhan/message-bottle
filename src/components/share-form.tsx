@@ -6,8 +6,14 @@ import {
   createShareInvite,
   type ShareInviteFormState,
 } from "@/app/actions";
+import { ChildAvatar } from "@/components/child-avatar";
 
-type ChildOption = { id: string; name: string; avatar: string };
+type ChildOption = {
+  id: string;
+  name: string;
+  avatar: string;
+  photo: string | null;
+};
 
 export function ShareForm({ childOptions }: { childOptions: ChildOption[] }) {
   const [state, formAction] = useActionState<ShareInviteFormState, FormData>(
@@ -61,7 +67,7 @@ export function ShareForm({ childOptions }: { childOptions: ChildOption[] }) {
                   value={child.id}
                   className="h-5 w-5 accent-blush-500"
                 />
-                <span className="text-2xl">{child.avatar}</span>
+                <ChildAvatar child={child} name={child.name} size="sm" />
                 <span className="font-semibold text-sea-800">
                   {child.name}
                 </span>

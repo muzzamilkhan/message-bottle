@@ -3,11 +3,13 @@
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveLetter, type LetterFormState } from "@/app/actions";
+import { ChildAvatar } from "@/components/child-avatar";
 
 type ChildOption = {
   id: string;
   name: string;
   avatar: string;
+  photo: string | null;
   owned?: boolean;
 };
 
@@ -27,7 +29,7 @@ export function LetterForm({
   letter?: ExistingLetter;
   // When the recipient is already decided (started from a child's avatar, or an
   // existing draft), the picker is hidden and the letter is fixed to this child.
-  lockedChild?: { id: string; name: string; avatar: string };
+  lockedChild?: { id: string; name: string; avatar: string; photo: string | null };
 }) {
   const [state, formAction] = useActionState<LetterFormState, FormData>(
     saveLetter,
@@ -70,7 +72,7 @@ export function LetterForm({
         <div>
           <span className="field-label">Who is it for?</span>
           <div className="flex items-center gap-3 rounded-2xl bg-sea-50 px-4 py-3 ring-1 ring-sea-100">
-            <span className="text-2xl">{lockedChild.avatar}</span>
+            <ChildAvatar child={lockedChild} name={lockedChild.name} size="sm" />
             <span className="font-semibold text-sea-800">
               {lockedChild.name}
             </span>

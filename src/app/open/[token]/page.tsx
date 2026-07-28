@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Bottle } from "@/components/bottle";
+import { ChildAvatar } from "@/components/child-avatar";
 import { LetterStack, type StackLetter } from "@/components/letter-stack";
 import { countdown, formatDate } from "@/lib/letters";
 import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
@@ -103,7 +104,7 @@ export default async function OpenPage({
   return (
     <Shell>
       <header className="mb-8 text-center">
-        <div className="text-5xl">{child.avatar}</div>
+        <ChildAvatar child={child} name={child.name} size="xl" />
         <h1 className="mt-2 text-3xl font-extrabold text-sea-800">
           Bottles for {child.name}
         </h1>

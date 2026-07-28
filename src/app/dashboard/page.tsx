@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
+import { ChildAvatar } from "@/components/child-avatar";
 import { formatDate } from "@/lib/letters";
 import { getAccessibleChildren } from "@/lib/children";
 
@@ -60,7 +61,7 @@ export default async function Dashboard() {
                     href={`/letters/new?childId=${child.id}`}
                     className="flex w-24 flex-col items-center gap-2 rounded-2xl bg-sea-50 px-3 py-4 text-center ring-1 ring-sea-100 transition hover:-translate-y-1 hover:bg-white hover:shadow-md"
                   >
-                    <span className="text-4xl">{child.avatar}</span>
+                    <ChildAvatar child={child} name={child.name} size="lg" />
                     <span className="max-w-full truncate text-sm font-semibold text-sea-800">
                       {child.name}
                     </span>

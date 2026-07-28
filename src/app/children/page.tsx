@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { AddChildSection } from "@/components/add-child-section";
 import { ChildCard, type ChildCardData } from "@/components/child-card";
+import { ChildAvatar } from "@/components/child-avatar";
 import { formatDate } from "@/lib/letters";
 import { describeBottleTimer } from "@/lib/age";
 
@@ -22,7 +23,13 @@ export default async function ChildrenPage() {
     prisma.child.findMany({
       where: { shares: { some: { parentId: session.user.id } } },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, avatar: true, parent: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        photo: true,
+        parent: { select: { name: true } },
+      },
     }),
   ]);
 
@@ -34,6 +41,7 @@ export default async function ChildrenPage() {
       id: child.id,
       name: child.name,
       avatar: child.avatar,
+      photo: child.photo,
       birthday: child.birthday
         ? child.birthday.toISOString().slice(0, 10)
         : null,
@@ -99,7 +107,7 @@ export default async function ChildrenPage() {
             <ul className="grid gap-3 sm:grid-cols-2">
               {sharedChildren.map((child) => (
                 <li key={child.id} className="card flex items-center gap-4">
-                  <span className="text-4xl">{child.avatar}</span>
+                  <ChildAvatar child={child} name={child.name} size="lg" />
                   <div className="flex-1">
                     <p className="font-bold text-sea-800">{child.name}</p>
                     <p className="text-xs text-sea-500">
