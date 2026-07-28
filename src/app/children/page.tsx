@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
-import { ChildForm } from "@/components/child-form";
+import { AddChildSection } from "@/components/add-child-section";
 import { ChildCard, type ChildCardData } from "@/components/child-card";
 import { formatDate } from "@/lib/letters";
 import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
@@ -74,10 +74,7 @@ export default async function ChildrenPage() {
         </p>
 
         <div className="grid gap-8 md:grid-cols-2">
-          <section>
-            <h2 className="mb-3 text-lg font-bold text-sea-800">Add a child</h2>
-            <ChildForm />
-          </section>
+          <AddChildSection />
 
           <section>
             <h2 className="mb-3 text-lg font-bold text-sea-800">
