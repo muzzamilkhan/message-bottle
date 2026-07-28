@@ -88,11 +88,25 @@ export async function saveLetter(
   redirect("/dashboard");
 }
 
-export type ChildFormState = { error?: string; ok?: boolean };
+// The raw strings the parent typed, echoed back on error so a re-rendered
+// form (which React resets after every action) can repopulate itself instead
+// of wiping still-correct fields like the name and birthday.
+export type ChildFormValues = {
+  name: string;
+  avatar: string;
+  birthday: string;
+  openAtAge: string;
+};
+
+export type ChildFormState = {
+  error?: string;
+  ok?: boolean;
+  values?: ChildFormValues;
+};
 
 // Parse and validate the shared child fields (name, avatar, full birthday, and
-// the optional bottle-timer age). Returns either an error message or the clean
-// values ready to persist.
+// the optional bottle-timer age). Returns either an error message (with the raw
+// values to echo back) or the clean values ready to persist.
 type ParsedChild = {
   name: string;
   avatar: string;
@@ -100,42 +114,53 @@ type ParsedChild = {
   openAtAge: number;
 };
 
-function parseChildInput(formData: FormData): { error: string } | ParsedChild {
+function parseChildInput(
+  formData: FormData,
+): { error: string; values: ChildFormValues } | ParsedChild {
   const name = String(formData.get("name") ?? "").trim();
   const avatarRaw = String(formData.get("avatar") ?? "").trim();
   const birthdayRaw = String(formData.get("birthday") ?? "").trim();
   const openAtAgeRaw = String(formData.get("openAtAge") ?? "").trim();
 
-  if (!name) {
-    return { error: "Please give your child a name." };
-  }
-
   const avatar = (CHILD_AVATARS as readonly string[]).includes(avatarRaw)
     ? avatarRaw
     : DEFAULT_AVATAR;
 
+  // What the user just entered, so an error re-render can restore it.
+  const values: ChildFormValues = {
+    name,
+    avatar,
+    birthday: birthdayRaw,
+    openAtAge: openAtAgeRaw,
+  };
+  const fail = (error: string) => ({ error, values });
+
+  if (!name) {
+    return fail("Please give your child a name.");
+  }
+
   if (!birthdayRaw) {
-    return { error: "Please add your child's birthday." };
+    return fail("Please add your child's birthday.");
   }
   // Parse a full calendar date (yyyy-mm-dd) at UTC noon so the day can't drift
   // across timezones when it's formatted back later.
   const birthday = new Date(`${birthdayRaw}T12:00:00Z`);
   if (Number.isNaN(birthday.getTime())) {
-    return { error: "That birthday doesn't look right." };
+    return fail("That birthday doesn't look right.");
   }
 
   if (!openAtAgeRaw) {
-    return { error: "Please set the age they can open their bottles." };
+    return fail("Please set the age they can open their bottles.");
   }
   const age = Number(openAtAgeRaw);
   if (!Number.isInteger(age) || age < 1 || age > 150) {
-    return { error: "The age they can open should be a whole number of years." };
+    return fail("The age they can open should be a whole number of years.");
   }
   const currentAge = ageInYears(birthday);
   if (age <= currentAge) {
-    return {
-      error: `Pick an age older than ${name} is now (currently ${currentAge}).`,
-    };
+    return fail(
+      `Pick an age older than ${name} is now (currently ${currentAge}).`,
+    );
   }
   const openAtAge = age;
 
