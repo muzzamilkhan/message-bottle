@@ -5,8 +5,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { CHILD_AVATARS, DEFAULT_AVATAR } from "@/lib/avatars";
-import { ageInYears } from "@/lib/age";
+import {
+  childInputMessage,
+  parseChildInput,
+  type ChildFormValues,
+  type ParsedChild,
+} from "@/lib/child-input";
 
 export type LetterFormState = { error?: string };
 
@@ -88,83 +92,34 @@ export async function saveLetter(
   redirect("/dashboard");
 }
 
-// The raw strings the parent typed, echoed back on error so a re-rendered
-// form (which React resets after every action) can repopulate itself instead
-// of wiping still-correct fields like the name and birthday.
-export type ChildFormValues = {
-  name: string;
-  avatar: string;
-  birthday: string;
-  openAtAge: string;
-};
-
 export type ChildFormState = {
   error?: string;
   ok?: boolean;
   values?: ChildFormValues;
 };
 
-// Parse and validate the shared child fields (name, avatar, full birthday, and
-// the optional bottle-timer age). Returns either an error message (with the raw
-// values to echo back) or the clean values ready to persist.
-type ParsedChild = {
-  name: string;
-  avatar: string;
-  birthday: Date;
-  openAtAge: number;
-};
-
-function parseChildInput(
+// Adapt FormData to the pure parser in @/lib/child-input, turning a rejection
+// code back into the message the form shows. The rules themselves live in the
+// lib so they can be tested without a request.
+function parseChildForm(
   formData: FormData,
 ): { error: string; values: ChildFormValues } | ParsedChild {
-  const name = String(formData.get("name") ?? "").trim();
-  const avatarRaw = String(formData.get("avatar") ?? "").trim();
-  const birthdayRaw = String(formData.get("birthday") ?? "").trim();
-  const openAtAgeRaw = String(formData.get("openAtAge") ?? "").trim();
+  const result = parseChildInput({
+    name: String(formData.get("name") ?? ""),
+    avatar: String(formData.get("avatar") ?? ""),
+    birthday: String(formData.get("birthday") ?? ""),
+    openAtAge: String(formData.get("openAtAge") ?? ""),
+  });
 
-  const avatar = (CHILD_AVATARS as readonly string[]).includes(avatarRaw)
-    ? avatarRaw
-    : DEFAULT_AVATAR;
+  if (result.ok) return result.value;
 
-  // What the user just entered, so an error re-render can restore it.
-  const values: ChildFormValues = {
-    name,
-    avatar,
-    birthday: birthdayRaw,
-    openAtAge: openAtAgeRaw,
+  return {
+    error: childInputMessage(result.error, {
+      name: result.values.name,
+      currentAge: result.currentAge,
+    }),
+    values: result.values,
   };
-  const fail = (error: string) => ({ error, values });
-
-  if (!name) {
-    return fail("Please give your child a name.");
-  }
-
-  if (!birthdayRaw) {
-    return fail("Please add your child's birthday.");
-  }
-  // Parse a full calendar date (yyyy-mm-dd) at UTC noon so the day can't drift
-  // across timezones when it's formatted back later.
-  const birthday = new Date(`${birthdayRaw}T12:00:00Z`);
-  if (Number.isNaN(birthday.getTime())) {
-    return fail("That birthday doesn't look right.");
-  }
-
-  if (!openAtAgeRaw) {
-    return fail("Please set the age they can open their bottles.");
-  }
-  const age = Number(openAtAgeRaw);
-  if (!Number.isInteger(age) || age < 1 || age > 150) {
-    return fail("The age they can open should be a whole number of years.");
-  }
-  const currentAge = ageInYears(birthday);
-  if (age <= currentAge) {
-    return fail(
-      `Pick an age older than ${name} is now (currently ${currentAge}).`,
-    );
-  }
-  const openAtAge = age;
-
-  return { name, avatar, birthday, openAtAge };
 }
 
 export async function createChild(
@@ -176,7 +131,7 @@ export async function createChild(
     return { error: "You need to be signed in." };
   }
 
-  const parsed = parseChildInput(formData);
+  const parsed = parseChildForm(formData);
   if ("error" in parsed) return parsed;
 
   await prisma.child.create({
@@ -219,7 +174,7 @@ export async function updateChild(
     return { error: "That child isn't one you can edit." };
   }
 
-  const parsed = parseChildInput(formData);
+  const parsed = parseChildForm(formData);
   if ("error" in parsed) return parsed;
 
   // Keep an existing token stable; mint one if this child never had it.
