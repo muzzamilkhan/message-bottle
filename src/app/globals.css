@@ -38,7 +38,9 @@
     @apply mb-1 block text-sm font-semibold text-sea-700;
   }
   .field-input {
-    @apply w-full rounded-2xl border-none bg-sea-50 px-4 py-3 text-sea-900 ring-1 ring-sea-100 outline-none placeholder:text-sea-300 focus:ring-2 focus:ring-blush-300;
+    /* box-border + min-w-0/max-w-full keeps native date/number controls, which
+       carry an intrinsic width on WebKit, from spilling outside their card. */
+    @apply box-border block w-full min-w-0 max-w-full rounded-2xl border-none bg-sea-50 px-4 py-3 text-sea-900 ring-1 ring-sea-100 outline-none placeholder:text-sea-300 focus:ring-2 focus:ring-blush-300;
   }
 }
 
