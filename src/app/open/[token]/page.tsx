@@ -34,10 +34,19 @@ function NotAvailable() {
 
 export default async function OpenPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { token } = await params;
+  const { test } = await searchParams;
+
+  // Testing escape hatch: `?test=yes` opens the bottle straight away, ignoring
+  // the age-based bottle timer (and each letter's delivery date). It only works
+  // when the deployment explicitly opts in with TESTING=true — in normal
+  // environments the flag is inert and bottles stay sealed until their time.
+  const testOverride = process.env.TESTING === "true" && test === "yes";
 
   const child = await prisma.child.findUnique({
     where: { openToken: token },
@@ -55,7 +64,8 @@ export default async function OpenPage({
   }
 
   const openDate = birthdayAtAge(child.birthday, child.openAtAge);
-  const reached = hasReachedOpenAge(child.birthday, child.openAtAge);
+  const reached =
+    testOverride || hasReachedOpenAge(child.birthday, child.openAtAge);
 
   // Still counting down — nothing but the sealed collection is shown.
   if (!reached) {
@@ -105,7 +115,7 @@ export default async function OpenPage({
       ) : (
         <div className="space-y-6">
           {child.letters.map((letter) => {
-            const unlocked = isUnlocked(letter.deliverAt);
+            const unlocked = testOverride || isUnlocked(letter.deliverAt);
             if (!unlocked) {
               return (
                 <div
