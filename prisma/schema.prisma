@@ -101,8 +101,11 @@ model Letter {
   child         Child?   @relation(fields: [childId], references: [id], onDelete: SetNull)
   childId       String?
   // The letter cannot be opened until this moment arrives.
-  deliverAt     DateTime
-  photos        Photo[]
+  deliverAt     DateTime?
+  // Lifecycle: "DRAFT" letters are still editable by their author and never
+  // reach the child. "SENT" letters are sealed forever — the author can no
+  // longer view, edit, or delete them.
+  status        String   @default("DRAFT")
   author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId      String
   createdAt     DateTime @default(now())
@@ -110,16 +113,6 @@ model Letter {
 
   @@index([authorId])
   @@index([childId])
-}
-
-model Photo {
-  id        String   @id @default(cuid())
-  url       String
-  letter    Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
-  letterId  String
-  createdAt DateTime @default(now())
-
-  @@index([letterId])
 }
 
 // ----- Parent access sharing -----

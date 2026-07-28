@@ -20,8 +20,8 @@ export default async function Home() {
           </h1>
           <p className="mt-4 max-w-md text-lg text-sea-700">
             Write letters to your kids that stay sealed until a special day.
-            Tuck in photos, set the date, and let the tide deliver your words
-            when the moment is right.
+            Set the date and let the tide deliver your words when the moment is
+            right.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row md:items-start">
             <SignInButton label="Start writing — sign in with Google" />
@@ -50,9 +50,9 @@ export default async function Home() {
               text: "Pour your heart out to your child — a birthday note, first-day-of-school wishes, or just because.",
             },
             {
-              emoji: "📸",
-              title: "Add photos",
-              text: "Slip in a few pictures so the memory feels alive when it's opened.",
+              emoji: "💾",
+              title: "Save a draft",
+              text: "Take your time. Save your letter as a draft and come back to polish it whenever you like.",
             },
             {
               emoji: "🗓️",

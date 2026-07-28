@@ -52,10 +52,12 @@ export default async function OpenPage({
     where: { openToken: token },
     include: {
       letters: {
-        // Oldest letter first — the child reads forward through time, one
+        // Only sealed (SENT) letters ever reach the child — drafts stay with
+        // the parent. Oldest first: the child reads forward through time, one
         // bottle at a time, swiping each away to reach the next.
+        where: { status: "SENT" },
         orderBy: { createdAt: "asc" },
-        include: { photos: true, author: { select: { name: true } } },
+        include: { author: { select: { name: true } } },
       },
     },
   });
@@ -123,10 +125,17 @@ export default async function OpenPage({
               body: letter.body,
               authorName: letter.author?.name?.trim() || "A parent",
               writtenDate: formatDate(letter.createdAt),
-              deliverDate: formatDate(letter.deliverAt),
-              countdown: countdown(letter.deliverAt),
-              unlocked: testOverride || isUnlocked(letter.deliverAt),
-              photos: letter.photos.map((p) => ({ id: p.id, url: p.url })),
+              // SENT letters always carry a delivery date; fall back defensively.
+              deliverDate: letter.deliverAt
+                ? formatDate(letter.deliverAt)
+                : formatDate(letter.createdAt),
+              countdown: letter.deliverAt
+                ? countdown(letter.deliverAt)
+                : "Ready to open!",
+              unlocked:
+                testOverride ||
+                !letter.deliverAt ||
+                isUnlocked(letter.deliverAt),
             }),
           )}
         />

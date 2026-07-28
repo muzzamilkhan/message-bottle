@@ -17,7 +17,7 @@ const body = Nunito({
 export const metadata: Metadata = {
   title: "Message in a Bottle",
   description:
-    "Write letters to your kids that unlock on a special day. Tuck in photos, seal the bottle, and set it adrift.",
+    "Write letters to your kids that unlock on a special day. Seal the bottle and set it adrift.",
 };
 
 export default function RootLayout({
