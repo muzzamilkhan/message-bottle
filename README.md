@@ -17,9 +17,9 @@ theme. Deploys cleanly to **Vercel**.
 - 🌊 Dashboard of your bottles with a live countdown to each opening
 - 🗑️ Delete letters you own (ownership enforced on every read/write)
 - 👶 Add and **edit** each child's details (name, avatar, full birthday)
-- 🍾 Set a per-child **bottle timer** — an age (older than they are now) at which
-  they can open their bottles from a private, self-authenticating link
-  (`/open/<token>`), no account needed
+- 🍾 Every child has a required **bottle timer** — the age (older than they are
+  now) at which they can open their bottles from a private, self-authenticating
+  link (`/open/<token>`), no account needed
 - 🔗 Share a child with a co-parent via an invite link — they sign in (creating
   an account if needed), accept, and can then write their own letters to that
   child too
@@ -122,9 +122,9 @@ content is sent to the browser — just the sealed-bottle placeholder.
 
 ## The bottle timer (a child's self-opening link)
 
-Each child can be given a **bottle timer**: an age, older than they are today,
-at which they may open their bottles themselves — without an account. Setting a
-timer mints a random, unguessable `openToken` and produces a private link
+Every child has a required **bottle timer**: an age, older than they are today,
+at which they may open their bottles themselves — without an account. Creating a
+child mints a random, unguessable `openToken` and produces a private link
 (`/open/<token>`) you hand to the child.
 
 The link is self-authenticating (the token is the credential) but still fully

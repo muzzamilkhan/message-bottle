@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { countdown, formatDate, isUnlocked } from "@/lib/letters";
+import { effectiveOpenDate } from "@/lib/age";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -14,7 +15,7 @@ export default async function Dashboard() {
     orderBy: { deliverAt: "asc" },
     include: {
       _count: { select: { photos: true } },
-      child: { select: { avatar: true } },
+      child: { select: { avatar: true, birthday: true, openAtAge: true } },
     },
   });
 
@@ -52,7 +53,15 @@ export default async function Dashboard() {
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2">
             {letters.map((letter) => {
-              const unlocked = isUnlocked(letter.deliverAt);
+              // The bottle only opens once its delivery date passes AND the
+              // child has reached the age their parent set — show the later of
+              // the two, not just the delivery date.
+              const openDate = effectiveOpenDate(
+                letter.deliverAt,
+                letter.child?.birthday ?? null,
+                letter.child?.openAtAge ?? null,
+              );
+              const unlocked = isUnlocked(openDate);
               return (
                 <li key={letter.id}>
                   <Link
@@ -68,7 +77,7 @@ export default async function Dashboard() {
                             : "bg-sea-100 text-sea-600"
                         }`}
                       >
-                        {unlocked ? "Ready to open" : countdown(letter.deliverAt)}
+                        {unlocked ? "Ready to open" : countdown(openDate)}
                       </span>
                     </div>
                     <h2 className="mt-3 text-lg font-bold text-sea-800">
@@ -78,7 +87,7 @@ export default async function Dashboard() {
                       {letter.child?.avatar ?? "💌"} For {letter.recipientName}
                     </p>
                     <p className="mt-3 text-xs text-sea-500">
-                      Opens {formatDate(letter.deliverAt)}
+                      Opens {formatDate(openDate)}
                       {letter._count.photos > 0 &&
                         ` · ${letter._count.photos} photo${
                           letter._count.photos > 1 ? "s" : ""

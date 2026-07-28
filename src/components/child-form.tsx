@@ -102,6 +102,7 @@ export function ChildForm({
           className="field-input"
           defaultValue={child?.birthday ?? undefined}
           max={new Date().toISOString().slice(0, 10)}
+          required
         />
         <p className="mt-1 text-xs text-sea-500">
           Pick the full date — the bottle timer counts the years from it.
@@ -113,7 +114,7 @@ export function ChildForm({
           htmlFor={`openAtAge-${child?.id ?? "new"}`}
           className="field-label"
         >
-          🍾 Bottle timer (optional)
+          🍾 Age they can open their bottles
         </label>
         <div className="flex items-center gap-2">
           <input
@@ -127,6 +128,7 @@ export function ChildForm({
             className="field-input w-28"
             placeholder="18"
             defaultValue={child?.openAtAge ?? undefined}
+            required
           />
           <span className="text-sm text-sea-600">
             years old before they can open their bottles

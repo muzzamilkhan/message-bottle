@@ -81,8 +81,8 @@ export type ChildFormState = { error?: string; ok?: boolean };
 type ParsedChild = {
   name: string;
   avatar: string;
-  birthday: Date | null;
-  openAtAge: number | null;
+  birthday: Date;
+  openAtAge: number;
 };
 
 function parseChildInput(formData: FormData): { error: string } | ParsedChild {
@@ -99,36 +99,30 @@ function parseChildInput(formData: FormData): { error: string } | ParsedChild {
     ? avatarRaw
     : DEFAULT_AVATAR;
 
-  let birthday: Date | null = null;
-  if (birthdayRaw) {
-    // Parse a full calendar date (yyyy-mm-dd) at UTC noon so the day can't drift
-    // across timezones when it's formatted back later.
-    const parsed = new Date(`${birthdayRaw}T12:00:00Z`);
-    if (Number.isNaN(parsed.getTime())) {
-      return { error: "That birthday doesn't look right." };
-    }
-    birthday = parsed;
+  if (!birthdayRaw) {
+    return { error: "Please add your child's birthday." };
+  }
+  // Parse a full calendar date (yyyy-mm-dd) at UTC noon so the day can't drift
+  // across timezones when it's formatted back later.
+  const birthday = new Date(`${birthdayRaw}T12:00:00Z`);
+  if (Number.isNaN(birthday.getTime())) {
+    return { error: "That birthday doesn't look right." };
   }
 
-  let openAtAge: number | null = null;
-  if (openAtAgeRaw) {
-    const age = Number(openAtAgeRaw);
-    if (!Number.isInteger(age) || age < 1 || age > 150) {
-      return { error: "The bottle-timer age should be a whole number of years." };
-    }
-    if (!birthday) {
-      return {
-        error: "Add a birthday first — the bottle timer counts from it.",
-      };
-    }
-    const currentAge = ageInYears(birthday);
-    if (age <= currentAge) {
-      return {
-        error: `Pick an age older than ${name} is now (currently ${currentAge}).`,
-      };
-    }
-    openAtAge = age;
+  if (!openAtAgeRaw) {
+    return { error: "Please set the age they can open their bottles." };
   }
+  const age = Number(openAtAgeRaw);
+  if (!Number.isInteger(age) || age < 1 || age > 150) {
+    return { error: "The age they can open should be a whole number of years." };
+  }
+  const currentAge = ageInYears(birthday);
+  if (age <= currentAge) {
+    return {
+      error: `Pick an age older than ${name} is now (currently ${currentAge}).`,
+    };
+  }
+  const openAtAge = age;
 
   return { name, avatar, birthday, openAtAge };
 }
@@ -151,8 +145,9 @@ export async function createChild(
       avatar: parsed.avatar,
       birthday: parsed.birthday,
       openAtAge: parsed.openAtAge,
-      // Mint the self-authenticating open token upfront when a timer is set.
-      openToken: parsed.openAtAge ? randomBytes(24).toString("base64url") : null,
+      // Every child has an open age, so mint the self-authenticating open token
+      // upfront.
+      openToken: randomBytes(24).toString("base64url"),
       parentId: session.user.id,
     },
   });
@@ -187,10 +182,8 @@ export async function updateChild(
   const parsed = parseChildInput(formData);
   if ("error" in parsed) return parsed;
 
-  // Keep an existing token stable; only mint one when a timer is newly set.
-  const openToken = parsed.openAtAge
-    ? existing.openToken ?? randomBytes(24).toString("base64url")
-    : existing.openToken;
+  // Keep an existing token stable; mint one if this child never had it.
+  const openToken = existing.openToken ?? randomBytes(24).toString("base64url");
 
   await prisma.child.update({
     where: { id: existing.id },

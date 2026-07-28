@@ -70,10 +70,11 @@ model Child {
   name        String
   // A cute emoji avatar for the child.
   avatar      String        @default("🧒")
-  birthday    DateTime?
+  birthday    DateTime
   // Bottle timer: the age at which this child may open their bottles via the
-  // self-authenticating link. Must be greater than their current age.
-  openAtAge   Int?
+  // self-authenticating link. Required, and must be greater than their current
+  // age when set.
+  openAtAge   Int
   // Random, unguessable token for the child's self-authenticating open link
   // (/open/<token>). Generated when a bottle timer is first set.
   openToken   String?       @unique
