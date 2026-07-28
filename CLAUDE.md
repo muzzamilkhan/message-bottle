@@ -7,6 +7,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a hobby project. Work directly on `main` — no feature branches, no PRs.
 Make atomic commits (one logical change each) and push `main` when the work is done.
 
+A pre-commit hook runs lint, tests, and typecheck. It lives in `.githooks/` (tracked, so
+it survives a reclone) and needs enabling once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+It checks the working tree rather than the staged snapshot — fine here, where commits are
+whole-file. Use `git commit --no-verify` to bypass it deliberately.
+
 ## Commands
 
 ```bash
