@@ -7,6 +7,14 @@
 // emoji slot on the open page) at 2x DPR with headroom to spare.
 export const PHOTO_SIZE = 160;
 
+// Square-size floor for the byte-cap fallback. If even the lowest quality
+// overshoots the byte cap at 160px, the only lever left is fewer pixels, so we
+// re-encode at progressively smaller squares down to this floor. 64px still
+// fills the emoji slot on the open page, and a quality-0.6 WebP that small is a
+// tiny fraction of the cap — so we never actually reach the floor, but it
+// guarantees the fallback terminates.
+export const PHOTO_MIN_SIZE = 64;
+
 // Decoded byte cap for a stored photo. Generous for 160px — a quality-0.82
 // WebP at that size lands around 7-9 KB.
 export const PHOTO_MAX_BYTES = 20 * 1024;
@@ -59,6 +67,24 @@ export function downscaleSteps(from: number, to: number = PHOTO_SIZE): number[] 
   // Always finish exactly on the target, including when the source is smaller
   // (an upscale) or already there (a no-op copy).
   if (steps.at(-1) !== to) steps.push(to);
+  return steps;
+}
+
+// Square sizes to re-encode at when a photo overshoots the byte cap at 160px.
+// Encoding is the only place we learn a photo is too dense to fit, and by then
+// the quality ladder is spent, so the remaining lever is pixels: each rung is
+// ~15% smaller than the last, down to the floor. Starting at `from` means the
+// first rung is the stored size itself — the size the quality ladder already
+// runs at — so a photo that fits there never shrinks further. Paired with the
+// quality ladder this makes "too large even after shrinking" unreachable for a
+// real photo.
+export function shrinkLadder(from: number = PHOTO_SIZE): number[] {
+  const steps = [Math.max(from, PHOTO_MIN_SIZE)];
+  let current = steps[0];
+  while (current > PHOTO_MIN_SIZE) {
+    current = Math.max(Math.round(current * 0.85), PHOTO_MIN_SIZE);
+    steps.push(current);
+  }
   return steps;
 }
 

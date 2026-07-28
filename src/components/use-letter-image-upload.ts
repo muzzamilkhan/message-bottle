@@ -9,6 +9,7 @@ import {
   IMAGE_MAX_UPLOAD_BYTES,
   IMAGE_QUALITY_LADDER,
   letterImageMessage,
+  shrinkLadder,
 } from "@/lib/letter-image";
 
 // The browser half of image upload: shrink a picked file and send it. The rules
@@ -17,6 +18,23 @@ import {
 
 // An image this draft already holds, or one uploaded during this session.
 export type DraftImage = { id: string; width: number; height: number };
+
+// Draw a source down to an exact size with high-quality smoothing.
+function drawTo(
+  source: ImageBitmap | HTMLCanvasElement,
+  width: number,
+  height: number,
+): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("canvas unavailable");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(source, 0, 0, width, height);
+  return canvas;
+}
 
 // Shrink a picked file to something the letter UI can actually use. The child
 // reads at ~640px, so anything past 1280 is bytes nobody sees.
@@ -39,28 +57,33 @@ async function compress(
   // Step down in halves rather than one big draw: browsers don't box-filter at
   // extreme ratios, and a single 4000→1280 draw looks grainy.
   for (const width of downscaleSteps(bitmap.width, target.width)) {
-    const height = Math.max(1, Math.round(width * aspect));
-    const next = document.createElement("canvas");
-    next.width = width;
-    next.height = height;
-    const context = next.getContext("2d");
-    if (!context) throw new Error("canvas unavailable");
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    context.drawImage(source, 0, 0, width, height);
-    source = next;
-    canvas = next;
+    canvas = drawTo(source, width, Math.max(1, Math.round(width * aspect)));
+    source = canvas;
   }
 
   bitmap.close();
 
-  // Try qualities in order, stopping at the first result under the cap.
-  for (const quality of IMAGE_QUALITY_LADDER) {
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/webp", quality),
-    );
-    if (blob && blob.size <= IMAGE_MAX_BYTES) {
-      return { blob, width: canvas.width, height: canvas.height };
+  // Encode at the fit size and try each quality; the first result under the cap
+  // wins. If even the lowest quality overshoots, the photo is too dense to fit
+  // at this size, so drop to a smaller long edge and try again. Each rung
+  // redraws from the previous one, so every step stays gentle, and the ladder's
+  // floor guarantees this terminates — at a real photo it lands on the first
+  // rung, so nothing shrinks past the fit size.
+  const targetLong = Math.max(target.width, target.height);
+  for (const longEdge of shrinkLadder(targetLong)) {
+    const scale = longEdge / targetLong;
+    const width = Math.max(1, Math.round(target.width * scale));
+    const height = Math.max(1, Math.round(target.height * scale));
+    if (width !== canvas.width || height !== canvas.height) {
+      canvas = drawTo(canvas, width, height);
+    }
+    for (const quality of IMAGE_QUALITY_LADDER) {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/webp", quality),
+      );
+      if (blob && blob.size <= IMAGE_MAX_BYTES) {
+        return { blob, width: canvas.width, height: canvas.height };
+      }
     }
   }
   throw new Error("IMAGE_TOO_LARGE");

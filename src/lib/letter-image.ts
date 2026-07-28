@@ -11,6 +11,14 @@
 // can show.
 export const IMAGE_MAX_DIMENSION = 1280;
 
+// Long-edge floor for the byte-cap fallback. When even the lowest quality
+// overshoots the byte cap at the fit size, the only lever left is fewer pixels,
+// so we re-encode at progressively smaller sizes down to this floor. At 400px a
+// photo is still recognisable in a letter, and a quality-0.6 WebP that small is
+// a small fraction of the cap for any real image — so we never actually reach
+// the floor, but it guarantees the fallback terminates.
+export const IMAGE_MIN_DIMENSION = 400;
+
 // Encoded byte cap for one stored image. A quality-0.82 WebP at 1280px lands
 // around 150-350 KB.
 export const IMAGE_MAX_BYTES = 600 * 1024;
@@ -66,6 +74,24 @@ export function downscaleSteps(
     steps.push(current);
   }
   if (steps.at(-1) !== to) steps.push(to);
+  return steps;
+}
+
+// Long edges to re-encode at when a photo overshoots the byte cap at its fit
+// size. Encoding is the only place we learn a photo is too dense to fit, and by
+// then the quality ladder is spent, so the remaining lever is pixels: each rung
+// is ~15% smaller than the last, down to the floor. Starting at `from` means
+// the first rung is the fit size itself — the size the quality ladder already
+// runs at — so a photo that fits there never shrinks further. Paired with the
+// quality ladder this makes "too large even after shrinking" unreachable for a
+// real photo.
+export function shrinkLadder(from: number = IMAGE_MAX_DIMENSION): number[] {
+  const steps = [Math.max(from, IMAGE_MIN_DIMENSION)];
+  let current = steps[0];
+  while (current > IMAGE_MIN_DIMENSION) {
+    current = Math.max(Math.round(current * 0.85), IMAGE_MIN_DIMENSION);
+    steps.push(current);
+  }
   return steps;
 }
 
