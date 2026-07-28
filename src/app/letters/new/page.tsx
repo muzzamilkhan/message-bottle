@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import { Header } from "@/components/header";
 import { LetterForm } from "@/components/letter-form";
 import { getAccessibleChildren, withoutPhotos } from "@/lib/children";
+import { prisma } from "@/lib/prisma";
+import { canUploadImages } from "@/lib/subscription";
 
 export default async function NewLetter({
   searchParams,
@@ -23,6 +25,11 @@ export default async function NewLetter({
     ? children.find((c) => c.id === childId)
     : undefined;
   const childOptionsWithoutPhotos = withoutPhotos(children);
+
+  const author = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscription: true },
+  });
 
   return (
     <>
@@ -60,6 +67,7 @@ export default async function NewLetter({
           <LetterForm
             childOptions={childOptionsWithoutPhotos}
             lockedChild={lockedChild}
+            canUploadImages={canUploadImages(author?.subscription)}
           />
         )}
       </main>

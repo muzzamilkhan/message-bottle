@@ -6,6 +6,7 @@ import { Header } from "@/components/header";
 import { LetterForm } from "@/components/letter-form";
 import { deleteLetter } from "@/app/actions";
 import { getAccessibleChildren, withoutPhotos } from "@/lib/children";
+import { canUploadImages } from "@/lib/subscription";
 
 // Only drafts have a page of their own — they're still editable. Sent letters
 // are sealed forever and can never be viewed, edited, or deleted by the author.
@@ -35,6 +36,11 @@ export default async function EditDraftPage({
     : undefined;
   const childOptionsWithoutPhotos = withoutPhotos(children);
 
+  const author = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscription: true },
+  });
+
   return (
     <>
       <Header userName={session.user.name} />
@@ -56,6 +62,7 @@ export default async function EditDraftPage({
         <LetterForm
           childOptions={childOptionsWithoutPhotos}
           lockedChild={lockedChild}
+          canUploadImages={canUploadImages(author?.subscription)}
           letter={{
             id: letter.id,
             title: letter.title,

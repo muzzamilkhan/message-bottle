@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveLetter, type LetterFormState } from "@/app/actions";
 import { ChildAvatar } from "@/components/child-avatar";
+import { LetterImageInput } from "@/components/letter-image-input";
 import type { LetterChildOption } from "@/lib/children";
 
 type ExistingLetter = {
@@ -17,12 +18,15 @@ export function LetterForm({
   childOptions,
   letter,
   lockedChild,
+  canUploadImages,
 }: {
   childOptions: LetterChildOption[];
   letter?: ExistingLetter;
   // When the recipient is already decided (started from a child's avatar, or an
   // existing draft), the picker is hidden and the letter is fixed to this child.
   lockedChild?: { id: string; name: string; avatar: string; photo: string | null };
+  // Whether this author's subscription covers photos. The server checks again.
+  canUploadImages: boolean;
 }) {
   const [state, formAction] = useActionState<LetterFormState, FormData>(
     saveLetter,
@@ -35,6 +39,19 @@ export function LetterForm({
   // When true, the "seal forever" confirmation panel is shown instead of the
   // normal buttons.
   const [confirming, setConfirming] = useState(false);
+  const [body, setBody] = useState(letter?.body ?? "");
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  // Drop a marker on its own line at the cursor, so the photo lands where the
+  // parent was writing rather than at the end.
+  function insertMarker(marker: string) {
+    const textarea = bodyRef.current;
+    const at = textarea?.selectionStart ?? body.length;
+    const before = body.slice(0, at).replace(/\n*$/, "");
+    const after = body.slice(at).replace(/^\n*/, "");
+    const next = [before, marker, after].filter(Boolean).join("\n\n");
+    setBody(next);
+  }
 
   function submitWith(intent: "draft" | "submit") {
     if (intentRef.current) intentRef.current.value = intent;
@@ -111,9 +128,17 @@ export function LetterForm({
         <textarea
           id="body"
           name="body"
+          ref={bodyRef}
           className="field-input min-h-48 resize-y"
           placeholder="Dear Ada, I'm writing this while you're still small enough to fall asleep on my shoulder…"
-          defaultValue={letter?.body ?? ""}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+        />
+        <LetterImageInput
+          letterId={letter?.id}
+          canUpload={canUploadImages}
+          body={body}
+          onInsert={insertMarker}
         />
       </div>
 
