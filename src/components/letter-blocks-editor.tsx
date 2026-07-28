@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { LetterBlock } from "@/lib/letter-blocks";
 import { IMAGES_PER_LETTER } from "@/lib/letter-image";
 import { LetterFormatToolbar } from "@/components/letter-format-toolbar";
@@ -42,6 +42,10 @@ export function LetterBlocksEditor({
   const { busy, error, upload } = useLetterImageUpload({ letterId });
   const [uploaded, setUploaded] = useState<DraftImage[]>([]);
   const [showUpsell, setShowUpsell] = useState(false);
+  // Whether the current selection is bold/italic, read from the browser rather
+  // than toggled on click, so the toolbar's pressed state always matches what's
+  // actually formatted.
+  const [marks, setMarks] = useState({ bold: false, italic: false });
   // Where a photo should land: the index after the text block last focused.
   const insertAt = useRef<number | null>(null);
 
@@ -105,18 +109,50 @@ export function LetterBlocksEditor({
     onChange(next);
   }
 
+  // Read bold/italic straight from the current selection. queryCommandState is
+  // the reality the toolbar should mirror: it flips back to false the moment a
+  // mark is toggled off or the caret leaves styled text, so the buttons can't
+  // get stuck "on". A selection outside this editor's text blocks isn't ours to
+  // report, so it reads as unformatted.
+  const refreshMarks = useCallback(() => {
+    const selection = document.getSelection();
+    const node = selection?.anchorNode;
+    const el = node?.nodeType === 1 ? (node as Element) : node?.parentElement;
+    if (!el?.closest("[data-letter-text-block]")) {
+      setMarks({ bold: false, italic: false });
+      return;
+    }
+    setMarks({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+    });
+  }, []);
+
+  // Follow the caret so the pressed state tracks selection moves and keyboard
+  // shortcuts (Cmd+B), not just toolbar clicks.
+  useEffect(() => {
+    document.addEventListener("selectionchange", refreshMarks);
+    return () => document.removeEventListener("selectionchange", refreshMarks);
+  }, [refreshMarks]);
+
   // execCommand is formally deprecated but implemented everywhere, and it
   // handles caret and selection restoration correctly. Hand-rolled Range
   // surgery is more code and more edge cases for no gain at this size.
-  const format = useCallback((command: "bold" | "italic") => {
-    document.execCommand(command);
-    // The DOM changed under the block; its own onInput won't fire for an
-    // execCommand, so nudge the focused block to re-emit.
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) {
-      active.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-  }, []);
+  const format = useCallback(
+    (command: "bold" | "italic") => {
+      document.execCommand(command);
+      // The DOM changed under the block; its own onInput won't fire for an
+      // execCommand, so nudge the focused block to re-emit.
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) {
+        active.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      // Toggling a mark doesn't move the caret, so selectionchange may not
+      // fire — re-read the state directly so the button updates now.
+      refreshMarks();
+    },
+    [refreshMarks],
+  );
 
   async function onPick(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -143,55 +179,66 @@ export function LetterBlocksEditor({
 
   return (
     <div>
-      <div className="field-input min-h-48 space-y-1">
-        <LetterFormatToolbar
-          onBold={() => format("bold")}
-          onItalic={() => format("italic")}
-        />
-        {keyed.map(({ key, block }, index) => {
-          if (block.kind === "photo") {
-            const image = known.get(block.id);
-            // An id with no known dimensions still renders — the image loads,
-            // the box just isn't reserved.
+      {/* The outer box owns the border and clips its rounded corners; the inner
+          div is the scroll container, so the toolbar's `sticky top-0` pins it to
+          the input rather than the page. overflow-x-hidden lets the toolbar's
+          negative margins reach the edges without a horizontal scrollbar. */}
+      <div className="field-input overflow-hidden !p-0">
+        <div className="max-h-[60vh] min-h-48 space-y-1 overflow-y-auto overflow-x-hidden px-4 py-3 text-sea-900">
+          <LetterFormatToolbar
+            boldActive={marks.bold}
+            italicActive={marks.italic}
+            onBold={() => format("bold")}
+            onItalic={() => format("italic")}
+          />
+          {keyed.map(({ key, block }, index) => {
+            if (block.kind === "photo") {
+              const image = known.get(block.id);
+              // An id with no known dimensions still renders — the image loads,
+              // the box just isn't reserved.
+              return (
+                <LetterPhotoBlock
+                  key={key}
+                  image={image ?? { id: block.id, width: 1280, height: 960 }}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < blocks.length - 1}
+                  onMoveUp={() => move(index, -1)}
+                  onMoveDown={() => move(index, 1)}
+                  onRemove={() => removeAt(index)}
+                />
+              );
+            }
             return (
-              <LetterPhotoBlock
-                key={key}
-                image={image ?? { id: block.id, width: 1280, height: 960 }}
-                canMoveUp={index > 0}
-                canMoveDown={index < blocks.length - 1}
-                onMoveUp={() => move(index, -1)}
-                onMoveDown={() => move(index, 1)}
-                onRemove={() => removeAt(index)}
-              />
-            );
-          }
-          return (
-            <div key={key} data-letter-text-block>
-              <LetterTextBlock
-                text={block.text}
-                placeholder={
-                  index === 0
-                    ? "Dear Ada, I'm writing this while you're still small enough to fall asleep on my shoulder…"
-                    : undefined
-                }
-                onChange={(text) => setBlock(index, text)}
-                onFocus={() => {
-                  insertAt.current = index + 1;
-                }}
-                onBlur={() => {
-                  // An emptied block that isn't the only one goes away, so the
-                  // letter doesn't accumulate blank gaps.
-                  if (blocks.length > 1 && blocks[index]?.kind === "text") {
-                    const current = blocks[index];
-                    if (current.kind === "text" && current.text.trim() === "") {
-                      removeAt(index);
-                    }
+              <div key={key} data-letter-text-block>
+                <LetterTextBlock
+                  text={block.text}
+                  placeholder={
+                    index === 0
+                      ? "Dear Ada, I'm writing this while you're still small enough to fall asleep on my shoulder…"
+                      : undefined
                   }
-                }}
-              />
-            </div>
-          );
-        })}
+                  onChange={(text) => setBlock(index, text)}
+                  onFocus={() => {
+                    insertAt.current = index + 1;
+                  }}
+                  onBlur={() => {
+                    // An emptied block that isn't the only one goes away, so the
+                    // letter doesn't accumulate blank gaps.
+                    if (blocks.length > 1 && blocks[index]?.kind === "text") {
+                      const current = blocks[index];
+                      if (
+                        current.kind === "text" &&
+                        current.text.trim() === ""
+                      ) {
+                        removeAt(index);
+                      }
+                    }
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <input
