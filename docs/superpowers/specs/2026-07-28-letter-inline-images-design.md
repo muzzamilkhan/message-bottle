@@ -407,6 +407,23 @@ The route handler, the canvas wrapper, the photo strip, and the renderer compone
 untested — they need a request, a DOM, or both, which per the project's smell test means
 the rules belong in the libs, and they do.
 
+## Planned follow-up: removing co-parent sharing
+
+Sharing a child with a co-parent is slated for removal in separate work, because it creates
+an ownership gap this feature makes worse: a co-parent can upload a photograph into a
+child's letters but cannot delete that child, so they can put a picture into the system
+and lose the ability to get it out. Only an owner may delete a child, and deletion is what
+removes the blobs.
+
+This design does not depend on that removal, and does not block on it. When sharing goes:
+
+- Authorization case 2 in `/api/letter-image/[id]` (the co-parent branch) is deleted
+  outright, and `canAccessChild` collapses to an owner check.
+- `deleteChild`'s blob sweep gets simpler — every letter to the child belongs to its owner,
+  so there is no cross-author case to reason about.
+
+Nothing in this feature should be built to make sharing easier to keep.
+
 ## Migration and rollout
 
 `prisma db push` adds `LetterImage` and `User.subscription`. Both are additive: existing
