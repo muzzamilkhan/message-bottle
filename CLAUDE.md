@@ -14,7 +14,7 @@ npm run dev          # dev server (already running on :3000 — see dev.log, don
 npm run build        # prisma generate + prisma db push + next build
 npm test             # node --test over src/**/*.test.ts
 npm run typecheck    # tsc --noEmit
-npm run lint         # next lint (not configured yet — prompts interactively)
+npm run lint         # eslint . (flat config)
 npm run db:push      # apply prisma/schema.prisma to the database
 npm run db:studio    # Prisma Studio
 ```
@@ -29,8 +29,21 @@ doesn't have), and `allowImportingTsExtensions` is set in tsconfig. App code out
 `src/lib/` still uses `@/`.
 
 `npm run build` is not a safe verification command — see the warning above. Use
-`npm test && npm run typecheck`, and `npx next build --no-lint` with a throwaway
+`npm test && npm run typecheck && npm run lint`, and `npx next build` with a throwaway
 `DATABASE_URL` if you need to confirm a real build.
+
+Lint is ESLint 9 flat config (`eslint.config.mjs`) run through the ESLint CLI. `next lint`
+is deprecated in Next 15 and gone in 16, and `eslint-config-next@15.x` ships only legacy
+`.eslintrc` files whose `@rushstack/eslint-patch` shim crashes on ESLint 9.39 — so the Next
+plugins are composed directly in the config rather than via that preset. Keep ESLint on 9.x:
+`eslint-config-next`'s peer range stops there, and `npm audit fix --force` would upgrade to
+10 and break the setup. The remaining `brace-expansion` advisories are devDependency-only
+(a linter reading local source); overriding to the patched 5.x breaks `minimatch` and
+crashes ESLint, so leave them.
+
+Because a parent's kids are called "children" throughout the domain, components take them
+as **`childOptions`**, never a `children` prop — that name is React's, and passing data
+through it trips `react/no-children-prop`.
 
 ## Testing philosophy
 

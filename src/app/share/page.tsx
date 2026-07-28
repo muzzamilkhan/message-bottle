@@ -60,7 +60,7 @@ export default async function SharePage() {
             <h2 className="mb-3 text-lg font-bold text-sea-800">
               Invite a co-parent
             </h2>
-            <ShareForm children={children} />
+            <ShareForm childOptions={children} />
           </section>
 
           <section className="space-y-8">

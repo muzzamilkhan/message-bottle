@@ -19,11 +19,11 @@ type ExistingLetter = {
 };
 
 export function LetterForm({
-  children,
+  childOptions,
   letter,
   lockedChild,
 }: {
-  children: ChildOption[];
+  childOptions: ChildOption[];
   letter?: ExistingLetter;
   // When the recipient is already decided (started from a child's avatar, or an
   // existing draft), the picker is hidden and the letter is fixed to this child.
@@ -89,7 +89,7 @@ export function LetterForm({
             defaultValue={letter?.childId ?? ""}
           >
             <option value="">Choose a child…</option>
-            {children.map((child) => (
+            {childOptions.map((child) => (
               <option key={child.id} value={child.id}>
                 {child.avatar} {child.name}
                 {child.owned === false ? " (shared with you)" : ""}

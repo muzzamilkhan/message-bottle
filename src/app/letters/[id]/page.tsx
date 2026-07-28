@@ -53,7 +53,7 @@ export default async function EditDraftPage({
         </p>
 
         <LetterForm
-          children={children}
+          childOptions={children}
           lockedChild={lockedChild}
           letter={{
             id: letter.id,

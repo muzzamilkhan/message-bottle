@@ -37,7 +37,7 @@ export default async function NewLetter({
           {lockedChild ? `Write a letter to ${lockedChild.name}` : "Write a letter"}
         </h1>
         <p className="mb-6 text-sea-600">
-          Say what's in your heart. It will wait, sealed, until the day you
+          Say what&apos;s in your heart. It will wait, sealed, until the day you
           choose.
         </p>
 
@@ -56,7 +56,7 @@ export default async function NewLetter({
             </Link>
           </div>
         ) : (
-          <LetterForm children={children} lockedChild={lockedChild} />
+          <LetterForm childOptions={children} lockedChild={lockedChild} />
         )}
       </main>
     </>

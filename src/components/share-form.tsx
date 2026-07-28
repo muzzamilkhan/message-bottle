@@ -9,7 +9,7 @@ import {
 
 type ChildOption = { id: string; name: string; avatar: string };
 
-export function ShareForm({ children }: { children: ChildOption[] }) {
+export function ShareForm({ childOptions }: { childOptions: ChildOption[] }) {
   const [state, formAction] = useActionState<ShareInviteFormState, FormData>(
     createShareInvite,
     {},
@@ -36,7 +36,7 @@ export function ShareForm({ children }: { children: ChildOption[] }) {
     }
   }
 
-  if (children.length === 0) {
+  if (childOptions.length === 0) {
     return (
       <div className="card text-sea-600">
         Add a child first — then you can invite a co-parent to write to them.
@@ -50,7 +50,7 @@ export function ShareForm({ children }: { children: ChildOption[] }) {
         <div>
           <span className="field-label">Choose who to share</span>
           <div className="space-y-2">
-            {children.map((child) => (
+            {childOptions.map((child) => (
               <label
                 key={child.id}
                 className="flex cursor-pointer items-center gap-3 rounded-2xl bg-sea-50 px-4 py-3 ring-1 ring-sea-100"
