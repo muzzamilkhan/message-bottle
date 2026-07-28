@@ -853,7 +853,10 @@ export function ChildAvatar({
   }
 
   return (
-    <span className={`${text} leading-none`} aria-hidden="true">
+    // No `leading-none`: the spans this replaced used Tailwind's default
+    // line-height for each size, and overriding it shortens the avatar box
+    // at every size below text-5xl.
+    <span className={text} aria-hidden="true">
       {child.avatar}
     </span>
   );
