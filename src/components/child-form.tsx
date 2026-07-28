@@ -59,7 +59,7 @@ export function ChildForm({
           className="field-input"
           placeholder="Ada"
           maxLength={80}
-          defaultValue={child?.name}
+          defaultValue={state.values?.name ?? child?.name}
           required
         />
       </div>
@@ -99,7 +99,7 @@ export function ChildForm({
           name="birthday"
           type="date"
           className="field-input"
-          defaultValue={child?.birthday ?? undefined}
+          defaultValue={state.values?.birthday ?? child?.birthday ?? undefined}
           max={new Date().toISOString().slice(0, 10)}
           required
         />
@@ -126,7 +126,7 @@ export function ChildForm({
             inputMode="numeric"
             className="field-input w-28"
             placeholder="18"
-            defaultValue={child?.openAtAge ?? undefined}
+            defaultValue={state.values?.openAtAge ?? child?.openAtAge ?? undefined}
             required
           />
           <span className="text-sm text-sea-600">
