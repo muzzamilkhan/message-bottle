@@ -59,7 +59,10 @@ export default async function OpenPage({
         // bottle at a time, swiping each away to reach the next.
         where: { status: "SENT" },
         orderBy: { createdAt: "asc" },
-        include: { author: { select: { name: true } } },
+        include: {
+          author: { select: { name: true } },
+          images: { select: { id: true, width: true, height: true } },
+        },
       },
     },
   });
@@ -120,11 +123,13 @@ export default async function OpenPage({
         </div>
       ) : (
         <LetterStack
+          openToken={child.openToken!}
           letters={child.letters.map(
             (letter): StackLetter => ({
               id: letter.id,
               title: letter.title,
               body: letter.body,
+              images: letter.images,
               authorName: letter.author?.name?.trim() || "A parent",
               writtenDate: formatDate(letter.createdAt),
             }),

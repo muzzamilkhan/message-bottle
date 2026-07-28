@@ -8,6 +8,7 @@ import {
   swipeDirection,
   VISIBLE_CARDS,
 } from "@/lib/letter-stack-style";
+import { LetterBody, type LetterImageRef } from "@/components/letter-body";
 
 // One letter, pre-formatted on the server so the client never touches Date
 // logic. By the time the stack renders, the child has reached their open age,
@@ -16,11 +17,18 @@ export type StackLetter = {
   id: string;
   title: string;
   body: string;
+  images: LetterImageRef[];
   authorName: string;
   writtenDate: string;
 };
 
-export function LetterStack({ letters }: { letters: StackLetter[] }) {
+export function LetterStack({
+  letters,
+  openToken,
+}: {
+  letters: StackLetter[];
+  openToken: string;
+}) {
   // Index of the letter currently on top of the stack. Oldest is first, so we
   // read from the bottom of the pile forward in time.
   const [index, setIndex] = useState(0);
@@ -138,7 +146,7 @@ export function LetterStack({ letters }: { letters: StackLetter[] }) {
                 onPointerUp={isTop ? onPointerUp : undefined}
                 onPointerCancel={isTop ? onPointerUp : undefined}
               >
-                <LetterCard letter={letter} />
+                <LetterCard letter={letter} openToken={openToken} />
               </div>
             );
           })}
@@ -162,7 +170,13 @@ export function LetterStack({ letters }: { letters: StackLetter[] }) {
   );
 }
 
-function LetterCard({ letter }: { letter: StackLetter }) {
+function LetterCard({
+  letter,
+  openToken,
+}: {
+  letter: StackLetter;
+  openToken: string;
+}) {
   return (
     <article className="card flex h-full flex-col overflow-y-auto">
       <h2 className="text-2xl font-extrabold text-sea-800">{letter.title}</h2>
@@ -170,8 +184,12 @@ function LetterCard({ letter }: { letter: StackLetter }) {
         From <strong className="text-sea-700">{letter.authorName}</strong> ·
         written {letter.writtenDate}
       </p>
-      <div className="mt-5 whitespace-pre-wrap text-lg leading-relaxed text-sea-800">
-        {letter.body}
+      <div className="mt-5 text-lg leading-relaxed text-sea-800">
+        <LetterBody
+          body={letter.body}
+          images={letter.images}
+          openToken={openToken}
+        />
       </div>
     </article>
   );
