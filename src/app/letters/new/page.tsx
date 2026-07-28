@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Header } from "@/components/header";
 import { LetterForm } from "@/components/letter-form";
-import { getAccessibleChildren } from "@/lib/children";
+import { getAccessibleChildren, withoutPhotos } from "@/lib/children";
 
 export default async function NewLetter({
   searchParams,
@@ -22,6 +22,7 @@ export default async function NewLetter({
   const lockedChild = childId
     ? children.find((c) => c.id === childId)
     : undefined;
+  const childOptionsWithoutPhotos = withoutPhotos(children);
 
   return (
     <>
@@ -56,7 +57,10 @@ export default async function NewLetter({
             </Link>
           </div>
         ) : (
-          <LetterForm childOptions={children} lockedChild={lockedChild} />
+          <LetterForm
+            childOptions={childOptionsWithoutPhotos}
+            lockedChild={lockedChild}
+          />
         )}
       </main>
     </>

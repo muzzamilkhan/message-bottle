@@ -4,14 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveLetter, type LetterFormState } from "@/app/actions";
 import { ChildAvatar } from "@/components/child-avatar";
-
-type ChildOption = {
-  id: string;
-  name: string;
-  avatar: string;
-  photo: string | null;
-  owned?: boolean;
-};
+import type { LetterChildOption } from "@/lib/children";
 
 type ExistingLetter = {
   id: string;
@@ -25,7 +18,7 @@ export function LetterForm({
   letter,
   lockedChild,
 }: {
-  childOptions: ChildOption[];
+  childOptions: LetterChildOption[];
   letter?: ExistingLetter;
   // When the recipient is already decided (started from a child's avatar, or an
   // existing draft), the picker is hidden and the letter is fixed to this child.
