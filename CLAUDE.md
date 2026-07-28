@@ -12,13 +12,25 @@ Make atomic commits (one logical change each) and push `main` when the work is d
 ```bash
 npm run dev          # dev server (already running on :3000 — see dev.log, don't start another)
 npm run build        # prisma generate + prisma db push + next build
-npm run lint         # next lint
+npm test             # node --test over src/**/*.test.ts
+npm run typecheck    # tsc --noEmit
+npm run lint         # next lint (not configured yet — prompts interactively)
 npm run db:push      # apply prisma/schema.prisma to the database
 npm run db:studio    # Prisma Studio
 ```
 
-There is no test suite or test runner in this repo yet. Verify changes by exercising the
-running dev server.
+Run a single file with `node --test src/lib/age.test.ts`, or one case with
+`node --test --test-name-pattern "leap-day"`.
+
+Tests use Node's built-in runner and its native TypeScript stripping — no jest/vitest, no
+transform step. Two consequences: modules under `src/lib/` import each other with
+**relative paths and explicit `.ts` extensions** (the `@/` alias needs a bundler Node
+doesn't have), and `allowImportingTsExtensions` is set in tsconfig. App code outside
+`src/lib/` still uses `@/`.
+
+`npm run build` is not a safe verification command — see the warning above. Use
+`npm test && npm run typecheck`, and `npx next build --no-lint` with a throwaway
+`DATABASE_URL` if you need to confirm a real build.
 
 ## Testing philosophy
 
@@ -31,6 +43,12 @@ a lib.
 
 A good smell test: if verifying a rule requires a session, a database, or a rendered DOM,
 the rule is in the wrong place.
+
+Pure libs take an **injectable clock** (`now`/`at` defaulting to `new Date()`) so date
+rules are deterministic under test. Validation libs return **error codes**, not copy, and
+the calling action maps a code to its message — so tests assert on rules and wording stays
+free to change. The tested libs are `age`, `letters`, `child-input`, `letter-input`, and
+`letter-stack-style`; `children.ts` and `prisma.ts` are DB access and stay untested.
 
 Note that `npm run build` runs `prisma db push --accept-data-loss` against `DATABASE_URL`
 before building — it is not a read-only check.
