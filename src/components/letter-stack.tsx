@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
 import { Bottle } from "./bottle";
 
 // One letter, pre-formatted on the server so the client never touches Date
@@ -16,7 +15,6 @@ export type StackLetter = {
   deliverDate: string;
   countdown: string;
   unlocked: boolean;
-  photos: { id: string; url: string }[];
 };
 
 // How far (px) the top letter must be dragged before it flies away for good.
@@ -227,21 +225,6 @@ function LetterCard({ letter }: { letter: StackLetter }) {
       <div className="mt-5 whitespace-pre-wrap text-lg leading-relaxed text-sea-800">
         {letter.body}
       </div>
-      {letter.photos.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {letter.photos.map((photo) => (
-            <div key={photo.id} className="relative aspect-square">
-              <Image
-                src={photo.url}
-                alt="A photo tucked into the letter"
-                fill
-                sizes="(max-width: 640px) 50vw, 200px"
-                className="rounded-2xl object-cover ring-1 ring-sea-100"
-              />
-            </div>
-          ))}
-        </div>
-      )}
     </article>
   );
 }

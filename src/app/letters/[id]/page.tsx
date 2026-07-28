@@ -1,14 +1,15 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
+import { LetterForm } from "@/components/letter-form";
 import { deleteLetter } from "@/app/actions";
-import { Bottle } from "@/components/bottle";
-import { countdown, formatDate, isUnlocked } from "@/lib/letters";
+import { getAccessibleChildren } from "@/lib/children";
 
-export default async function LetterPage({
+// Only drafts have a page of their own — they're still editable. Sent letters
+// are sealed forever and can never be viewed, edited, or deleted by the author.
+export default async function EditDraftPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -17,14 +18,17 @@ export default async function LetterPage({
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const letter = await prisma.letter.findUnique({
-    where: { id },
-    include: { photos: true },
-  });
+  const letter = await prisma.letter.findUnique({ where: { id } });
 
-  if (!letter || letter.authorId !== session.user.id) notFound();
+  if (
+    !letter ||
+    letter.authorId !== session.user.id ||
+    letter.status !== "DRAFT"
+  ) {
+    notFound();
+  }
 
-  const unlocked = isUnlocked(letter.deliverAt);
+  const children = await getAccessibleChildren(session.user.id);
 
   return (
     <>
@@ -36,64 +40,26 @@ export default async function LetterPage({
         >
           ← Back to your bottles
         </Link>
+        <h1 className="mb-1 mt-3 text-3xl font-extrabold text-sea-800">
+          Edit your draft
+        </h1>
+        <p className="mb-6 text-sea-600">
+          Keep tinkering, or seal it when you&apos;re ready. Once sealed, it&apos;s
+          out of your hands for good.
+        </p>
 
-        {unlocked ? (
-          <article className="card mt-4">
-            <p className="text-sm font-semibold uppercase tracking-wide text-blush-400">
-              For {letter.recipientName}
-            </p>
-            <h1 className="mt-1 text-3xl font-extrabold text-sea-800">
-              {letter.title}
-            </h1>
-            <p className="mt-1 text-xs text-sea-500">
-              Written {formatDate(letter.createdAt)} · Opened{" "}
-              {formatDate(letter.deliverAt)}
-            </p>
-
-            <div className="mt-6 whitespace-pre-wrap text-lg leading-relaxed text-sea-800">
-              {letter.body}
-            </div>
-
-            {letter.photos.length > 0 && (
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {letter.photos.map((photo) => (
-                  <div key={photo.id} className="relative aspect-square">
-                    <Image
-                      src={photo.url}
-                      alt="A photo tucked into the letter"
-                      fill
-                      sizes="(max-width: 640px) 50vw, 200px"
-                      className="rounded-2xl object-cover ring-1 ring-sea-100"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </article>
-        ) : (
-          <div className="card mt-4 flex flex-col items-center py-12 text-center">
-            <div className="animate-bob">
-              <Bottle className="w-36" />
-            </div>
-            <span className="mt-4 rounded-full bg-sea-100 px-4 py-1 text-sm font-semibold text-sea-700">
-              🔒 {countdown(letter.deliverAt)}
-            </span>
-            <h1 className="mt-4 text-2xl font-bold text-sea-800">
-              This bottle is still sealed
-            </h1>
-            <p className="mt-2 max-w-sm text-sea-600">
-              Your letter to <strong>{letter.recipientName}</strong> can be
-              opened on <strong>{formatDate(letter.deliverAt)}</strong>. Until
-              then, it drifts safely on the tide.
-            </p>
-            {letter.photos.length > 0 && (
-              <p className="mt-3 text-sm text-sea-500">
-                {letter.photos.length} photo
-                {letter.photos.length > 1 ? "s" : ""} sealed inside.
-              </p>
-            )}
-          </div>
-        )}
+        <LetterForm
+          children={children}
+          letter={{
+            id: letter.id,
+            title: letter.title,
+            childId: letter.childId,
+            body: letter.body,
+            deliverAt: letter.deliverAt
+              ? letter.deliverAt.toISOString().slice(0, 10)
+              : null,
+          }}
+        />
 
         <form action={deleteLetter} className="mt-6 text-center">
           <input type="hidden" name="id" value={letter.id} />
@@ -101,7 +67,7 @@ export default async function LetterPage({
             type="submit"
             className="text-sm font-semibold text-sea-400 hover:text-blush-500"
           >
-            Delete this bottle
+            Delete this draft
           </button>
         </form>
       </main>

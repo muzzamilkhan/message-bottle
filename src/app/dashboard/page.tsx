@@ -3,21 +3,22 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
-import { countdown, formatDate, isUnlocked } from "@/lib/letters";
-import { effectiveOpenDate } from "@/lib/age";
+import { formatDate } from "@/lib/letters";
 
 export default async function Dashboard() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const letters = await prisma.letter.findMany({
-    where: { authorId: session.user.id },
-    orderBy: { deliverAt: "asc" },
-    include: {
-      _count: { select: { photos: true } },
-      child: { select: { avatar: true, birthday: true, openAtAge: true } },
-    },
-  });
+  const [sentCount, drafts] = await Promise.all([
+    prisma.letter.count({
+      where: { authorId: session.user.id, status: "SENT" },
+    }),
+    prisma.letter.findMany({
+      where: { authorId: session.user.id, status: "DRAFT" },
+      orderBy: { updatedAt: "desc" },
+      include: { child: { select: { avatar: true } } },
+    }),
+  ]);
 
   return (
     <>
@@ -29,9 +30,9 @@ export default async function Dashboard() {
               Your bottles
             </h1>
             <p className="text-sea-600">
-              {letters.length
-                ? `${letters.length} letter${letters.length > 1 ? "s" : ""} adrift.`
-                : "No letters yet — write your first one!"}
+              {sentCount > 0
+                ? `${sentCount} message${sentCount > 1 ? "s" : ""} sealed and set adrift.`
+                : "No messages sent yet — write your first one!"}
             </p>
           </div>
           <Link href="/letters/new" className="btn-primary">
@@ -39,64 +40,62 @@ export default async function Dashboard() {
           </Link>
         </div>
 
-        {letters.length === 0 ? (
-          <div className="card flex flex-col items-center py-16 text-center">
-            <div className="animate-float text-6xl">🌊</div>
+        {/* Sent messages are sealed forever, so we only ever surface a count —
+            there's nothing left to open on this side of the tide. */}
+        <div className="card mb-8 flex items-center gap-4">
+          <span className="text-4xl">🍾</span>
+          <div>
+            <p className="text-2xl font-extrabold text-sea-800">{sentCount}</p>
+            <p className="text-sm text-sea-600">
+              message{sentCount === 1 ? "" : "s"} sent. Once sealed, a bottle
+              can&apos;t be viewed, edited, or deleted — it&apos;s on its way to
+              your child.
+            </p>
+          </div>
+        </div>
+
+        <h2 className="mb-3 text-xl font-bold text-sea-800">Drafts</h2>
+        {drafts.length === 0 ? (
+          <div className="card flex flex-col items-center py-12 text-center">
+            <div className="animate-float text-5xl">📝</div>
             <p className="mt-4 max-w-sm text-sea-600">
-              Every bottle starts with a few words. Write something your child
-              will treasure years from now.
+              No drafts right now. Start a letter and save it as a draft to
+              come back to it later.
             </p>
             <Link href="/letters/new" className="btn-primary mt-6">
-              Write your first letter
+              Write a letter
             </Link>
           </div>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2">
-            {letters.map((letter) => {
-              // The bottle only opens once its delivery date passes AND the
-              // child has reached the age their parent set — show the later of
-              // the two, not just the delivery date.
-              const openDate = effectiveOpenDate(
-                letter.deliverAt,
-                letter.child?.birthday ?? null,
-                letter.child?.openAtAge ?? null,
-              );
-              const unlocked = isUnlocked(openDate);
-              return (
-                <li key={letter.id}>
-                  <Link
-                    href={`/letters/${letter.id}`}
-                    className="card block h-full transition hover:-translate-y-1 hover:shadow-xl"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-3xl">{unlocked ? "💌" : "🔒"}</span>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          unlocked
-                            ? "bg-blush-200 text-blush-500"
-                            : "bg-sea-100 text-sea-600"
-                        }`}
-                      >
-                        {unlocked ? "Ready to open" : countdown(openDate)}
-                      </span>
-                    </div>
-                    <h2 className="mt-3 text-lg font-bold text-sea-800">
-                      {letter.title}
-                    </h2>
-                    <p className="text-sm text-sea-600">
-                      {letter.child?.avatar ?? "💌"} For {letter.recipientName}
-                    </p>
-                    <p className="mt-3 text-xs text-sea-500">
-                      Opens {formatDate(openDate)}
-                      {letter._count.photos > 0 &&
-                        ` · ${letter._count.photos} photo${
-                          letter._count.photos > 1 ? "s" : ""
-                        }`}
-                    </p>
-                  </Link>
-                </li>
-              );
-            })}
+            {drafts.map((draft) => (
+              <li key={draft.id}>
+                <Link
+                  href={`/letters/${draft.id}`}
+                  className="card block h-full transition hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-3xl">📝</span>
+                    <span className="rounded-full bg-sea-100 px-3 py-1 text-xs font-semibold text-sea-600">
+                      Draft
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-lg font-bold text-sea-800">
+                    {draft.title || "Untitled draft"}
+                  </h3>
+                  <p className="text-sm text-sea-600">
+                    {draft.child?.avatar ?? "💌"}{" "}
+                    {draft.recipientName
+                      ? `For ${draft.recipientName}`
+                      : "No recipient yet"}
+                  </p>
+                  <p className="mt-3 text-xs text-sea-500">
+                    Last edited {formatDate(draft.updatedAt)} · Tap to edit or
+                    seal
+                  </p>
+                </Link>
+              </li>
+            ))}
           </ul>
         )}
       </main>

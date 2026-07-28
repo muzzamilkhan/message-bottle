@@ -10,7 +10,11 @@ import { ageInYears } from "@/lib/age";
 
 export type LetterFormState = { error?: string };
 
-export async function createLetter(
+// Create a new draft or update/submit an existing one. The `intent` field
+// decides whether the letter is kept as an editable DRAFT or sealed as SENT.
+// Once a letter is SENT it can never be edited, so this action refuses to
+// touch anything that isn't still a draft.
+export async function saveLetter(
   _prev: LetterFormState,
   formData: FormData,
 ): Promise<LetterFormState> {
@@ -19,55 +23,78 @@ export async function createLetter(
     return { error: "You need to be signed in to write a letter." };
   }
 
+  const id = String(formData.get("id") ?? "").trim();
+  const intent = String(formData.get("intent") ?? "draft").trim();
+  const submitting = intent === "submit";
   const title = String(formData.get("title") ?? "").trim();
   const childId = String(formData.get("childId") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const deliverAtRaw = String(formData.get("deliverAt") ?? "").trim();
-  const photoUrls = formData
-    .getAll("photoUrls")
-    .map((v) => String(v))
-    .filter(Boolean);
 
-  if (!title || !childId || !body || !deliverAtRaw) {
-    return { error: "Please fill in the title, child, message, and date." };
+  // A draft needs at least a title to have something to come back to; sending
+  // requires every field so the sealed letter is complete.
+  if (submitting) {
+    if (!title || !childId || !body || !deliverAtRaw) {
+      return { error: "Please fill in the title, child, message, and date." };
+    }
+  } else if (!title) {
+    return { error: "Give your draft a title so you can find it later." };
   }
 
-  // Verify the child belongs to this user (or was shared with them by a
-  // co-parent) and grab a name snapshot.
-  const child = await prisma.child.findFirst({
-    where: {
-      id: childId,
-      OR: [
-        { parentId: session.user.id },
-        { shares: { some: { parentId: session.user.id } } },
-      ],
-    },
-  });
-  if (!child) {
-    return { error: "Please choose one of your children." };
+  // Verify the chosen child belongs to this user (or was shared with them by a
+  // co-parent) and grab a name snapshot. A child is optional for a draft.
+  let child: { id: string; name: string } | null = null;
+  if (childId) {
+    child = await prisma.child.findFirst({
+      where: {
+        id: childId,
+        OR: [
+          { parentId: session.user.id },
+          { shares: { some: { parentId: session.user.id } } },
+        ],
+      },
+      select: { id: true, name: true },
+    });
+    if (!child) {
+      return { error: "Please choose one of your children." };
+    }
   }
 
-  const deliverAt = new Date(deliverAtRaw);
-  if (Number.isNaN(deliverAt.getTime())) {
-    return { error: "That delivery date doesn't look right." };
-  }
-  if (deliverAt.getTime() <= Date.now()) {
-    return { error: "Pick a delivery date in the future — that's the magic!" };
+  let deliverAt: Date | null = null;
+  if (deliverAtRaw) {
+    deliverAt = new Date(deliverAtRaw);
+    if (Number.isNaN(deliverAt.getTime())) {
+      return { error: "That delivery date doesn't look right." };
+    }
+    if (deliverAt.getTime() <= Date.now()) {
+      return { error: "Pick a delivery date in the future — that's the magic!" };
+    }
   }
 
-  await prisma.letter.create({
-    data: {
-      title,
-      recipientName: child.name,
-      childId: child.id,
-      body,
-      deliverAt,
-      authorId: session.user.id,
-      photos: photoUrls.length
-        ? { create: photoUrls.map((url) => ({ url })) }
-        : undefined,
-    },
-  });
+  const data = {
+    title,
+    recipientName: child?.name ?? "",
+    childId: child?.id ?? null,
+    body,
+    deliverAt,
+    status: submitting ? "SENT" : "DRAFT",
+  };
+
+  if (id) {
+    // Only update the author's own letter, and only while it's still a draft —
+    // a sent letter is sealed forever.
+    const result = await prisma.letter.updateMany({
+      where: { id, authorId: session.user.id, status: "DRAFT" },
+      data,
+    });
+    if (result.count === 0) {
+      return { error: "That draft can't be edited anymore." };
+    }
+  } else {
+    await prisma.letter.create({
+      data: { ...data, authorId: session.user.id },
+    });
+  }
 
   revalidatePath("/dashboard");
   redirect("/dashboard");
@@ -225,9 +252,10 @@ export async function deleteLetter(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  // Only delete a letter the current user actually owns.
+  // Only delete a draft the current user owns. Once a letter is sent it's
+  // sealed forever and can't be removed.
   await prisma.letter.deleteMany({
-    where: { id, authorId: session.user.id },
+    where: { id, authorId: session.user.id, status: "DRAFT" },
   });
 
   revalidatePath("/dashboard");

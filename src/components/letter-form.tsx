@@ -1,11 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import Image from "next/image";
-import { createLetter, type LetterFormState } from "@/app/actions";
+import { saveLetter, type LetterFormState } from "@/app/actions";
 
-type Uploaded = { url: string; name: string };
 type ChildOption = {
   id: string;
   name: string;
@@ -13,46 +11,49 @@ type ChildOption = {
   owned?: boolean;
 };
 
-export function LetterForm({ children }: { children: ChildOption[] }) {
+type ExistingLetter = {
+  id: string;
+  title: string;
+  childId: string | null;
+  body: string;
+  deliverAt: string | null; // yyyy-mm-dd
+};
+
+export function LetterForm({
+  children,
+  letter,
+}: {
+  children: ChildOption[];
+  letter?: ExistingLetter;
+}) {
   const [state, formAction] = useActionState<LetterFormState, FormData>(
-    createLetter,
+    saveLetter,
     {},
   );
-  const [photos, setPhotos] = useState<Uploaded[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  // The intent (draft vs submit) is written into a hidden field just before the
+  // form submits, depending on which button was pressed.
+  const intentRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  // When true, the "seal forever" confirmation panel is shown instead of the
+  // normal buttons.
+  const [confirming, setConfirming] = useState(false);
 
-  // Default the date picker to one year from today.
+  // Default the date picker to one year from today for new letters.
   const nextYear = new Date();
   nextYear.setFullYear(nextYear.getFullYear() + 1);
-  const defaultDate = nextYear.toISOString().slice(0, 10);
+  const defaultDate = letter?.deliverAt ?? nextYear.toISOString().slice(0, 10);
   const minDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
-  async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    setUploadError(null);
-    setUploading(true);
-    try {
-      for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: fd });
-        const data = await res.json();
-        if (!res.ok) {
-          setUploadError(data.error ?? "Upload failed.");
-          continue;
-        }
-        setPhotos((prev) => [...prev, { url: data.url, name: file.name }]);
-      }
-    } catch {
-      setUploadError("Something went wrong while uploading.");
-    } finally {
-      setUploading(false);
-    }
+  function submitWith(intent: "draft" | "submit") {
+    if (intentRef.current) intentRef.current.value = intent;
+    formRef.current?.requestSubmit();
   }
 
   return (
-    <form action={formAction} className="card space-y-5">
+    <form ref={formRef} action={formAction} className="card space-y-5">
+      {letter && <input type="hidden" name="id" value={letter.id} />}
+      <input type="hidden" name="intent" ref={intentRef} defaultValue="draft" />
+
       <div>
         <label htmlFor="title" className="field-label">
           Letter title
@@ -63,6 +64,7 @@ export function LetterForm({ children }: { children: ChildOption[] }) {
           className="field-input"
           placeholder="Happy 18th birthday, my love"
           maxLength={120}
+          defaultValue={letter?.title ?? ""}
           required
         />
       </div>
@@ -75,12 +77,9 @@ export function LetterForm({ children }: { children: ChildOption[] }) {
           id="childId"
           name="childId"
           className="field-input"
-          defaultValue=""
-          required
+          defaultValue={letter?.childId ?? ""}
         >
-          <option value="" disabled>
-            Choose a child…
-          </option>
+          <option value="">Choose a child…</option>
           {children.map((child) => (
             <option key={child.id} value={child.id}>
               {child.avatar} {child.name}
@@ -106,7 +105,7 @@ export function LetterForm({ children }: { children: ChildOption[] }) {
           name="body"
           className="field-input min-h-48 resize-y"
           placeholder="Dear Ada, I'm writing this while you're still small enough to fall asleep on my shoulder…"
-          required
+          defaultValue={letter?.body ?? ""}
         />
       </div>
 
@@ -121,55 +120,10 @@ export function LetterForm({ children }: { children: ChildOption[] }) {
           className="field-input"
           defaultValue={defaultDate}
           min={minDate}
-          required
         />
         <p className="mt-1 text-xs text-sea-500">
           The bottle stays sealed until this day.
         </p>
-      </div>
-
-      <div>
-        <span className="field-label">Photos (optional)</span>
-        <label className="btn-secondary cursor-pointer text-sm">
-          {uploading ? "Uploading…" : "📸 Add photos"}
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-        </label>
-        {uploadError && (
-          <p className="mt-2 text-sm text-blush-500">{uploadError}</p>
-        )}
-        {photos.length > 0 && (
-          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
-            {photos.map((p, i) => (
-              <div key={p.url} className="group relative aspect-square">
-                <Image
-                  src={p.url}
-                  alt={p.name}
-                  fill
-                  sizes="120px"
-                  className="rounded-2xl object-cover ring-1 ring-sea-100"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPhotos((prev) => prev.filter((_, idx) => idx !== i))
-                  }
-                  className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sea-700 shadow ring-1 ring-sea-100"
-                  aria-label={`Remove ${p.name}`}
-                >
-                  ✕
-                </button>
-                <input type="hidden" name="photoUrls" value={p.url} />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {state.error && (
@@ -178,20 +132,67 @@ export function LetterForm({ children }: { children: ChildOption[] }) {
         </p>
       )}
 
-      <SubmitButton disabled={uploading} />
+      {confirming ? (
+        <div className="rounded-2xl bg-blush-100 p-5 ring-1 ring-blush-200">
+          <p className="text-sm font-semibold text-blush-500">
+            ⚠️ Sealing is forever
+          </p>
+          <p className="mt-2 text-sm text-sea-700">
+            Once you seal this bottle you will{" "}
+            <strong>never be able to view, edit, or delete it</strong>. It drifts
+            off to your child and out of your hands for good.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <ConfirmSealButton onSeal={() => submitWith("submit")} />
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="btn-secondary"
+            >
+              Go back
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <SaveDraftButton onSave={() => submitWith("draft")} />
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="btn-primary w-full"
+          >
+            🍾 Seal &amp; set adrift
+          </button>
+        </div>
+      )}
     </form>
   );
 }
 
-function SubmitButton({ disabled }: { disabled: boolean }) {
+function SaveDraftButton({ onSave }: { onSave: () => void }) {
   const { pending } = useFormStatus();
   return (
     <button
-      type="submit"
-      disabled={pending || disabled}
+      type="button"
+      onClick={onSave}
+      disabled={pending}
+      className="btn-secondary w-full disabled:opacity-60"
+    >
+      {pending ? "Saving…" : "💾 Save draft"}
+    </button>
+  );
+}
+
+function ConfirmSealButton({ onSeal }: { onSeal: () => void }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="button"
+      onClick={onSeal}
+      disabled={pending}
       className="btn-primary w-full disabled:opacity-60"
     >
-      {pending ? "Sealing the bottle…" : "🍾 Seal & set adrift"}
+      {pending ? "Sealing the bottle…" : "Yes, seal it forever"}
     </button>
   );
 }
