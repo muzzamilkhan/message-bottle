@@ -5,11 +5,23 @@ import { Header } from "@/components/header";
 import { LetterForm } from "@/components/letter-form";
 import { getAccessibleChildren } from "@/lib/children";
 
-export default async function NewLetter() {
+export default async function NewLetter({
+  searchParams,
+}: {
+  searchParams: Promise<{ childId?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
   const children = await getAccessibleChildren(session.user.id);
+
+  // If we arrived from a child's avatar, lock the letter to that child (and
+  // hide the picker). Ignore an unknown/inaccessible id and fall back to the
+  // picker.
+  const { childId } = await searchParams;
+  const lockedChild = childId
+    ? children.find((c) => c.id === childId)
+    : undefined;
 
   return (
     <>
@@ -22,7 +34,7 @@ export default async function NewLetter() {
           ← Back to your bottles
         </Link>
         <h1 className="mb-1 mt-3 text-3xl font-extrabold text-sea-800">
-          Write a letter
+          {lockedChild ? `Write a letter to ${lockedChild.name}` : "Write a letter"}
         </h1>
         <p className="mb-6 text-sea-600">
           Say what's in your heart. It will wait, sealed, until the day you
@@ -44,7 +56,7 @@ export default async function NewLetter() {
             </Link>
           </div>
         ) : (
-          <LetterForm children={children} />
+          <LetterForm children={children} lockedChild={lockedChild} />
         )}
       </main>
     </>

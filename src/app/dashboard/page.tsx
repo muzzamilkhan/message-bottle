@@ -4,12 +4,13 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { formatDate } from "@/lib/letters";
+import { getAccessibleChildren } from "@/lib/children";
 
 export default async function Dashboard() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const [sentCount, drafts] = await Promise.all([
+  const [sentCount, drafts, children] = await Promise.all([
     prisma.letter.count({
       where: { authorId: session.user.id, status: "SENT" },
     }),
@@ -18,6 +19,7 @@ export default async function Dashboard() {
       orderBy: { updatedAt: "desc" },
       include: { child: { select: { avatar: true } } },
     }),
+    getAccessibleChildren(session.user.id),
   ]);
 
   return (
@@ -38,6 +40,44 @@ export default async function Dashboard() {
           <Link href="/letters/new" className="btn-primary">
             ✍️ Write a letter
           </Link>
+        </div>
+
+        {/* Kid avatars — the quickest way to start a letter. Tapping one opens a
+            new letter already addressed to that child. Wraps to more rows when a
+            parent has lots of kids. */}
+        <div className="card mb-8">
+          <h2 className="text-lg font-bold text-sea-800">Write a letter to…</h2>
+          <p className="mb-4 mt-1 text-sm text-sea-600">
+            {children.length > 0
+              ? "Tap a child to start a new bottle just for them."
+              : "Add a child first, then tap their face here to write to them."}
+          </p>
+          {children.length > 0 ? (
+            <ul className="flex flex-wrap gap-3">
+              {children.map((child) => (
+                <li key={child.id}>
+                  <Link
+                    href={`/letters/new?childId=${child.id}`}
+                    className="flex w-24 flex-col items-center gap-2 rounded-2xl bg-sea-50 px-3 py-4 text-center ring-1 ring-sea-100 transition hover:-translate-y-1 hover:bg-white hover:shadow-md"
+                  >
+                    <span className="text-4xl">{child.avatar}</span>
+                    <span className="max-w-full truncate text-sm font-semibold text-sea-800">
+                      {child.name}
+                    </span>
+                    {!child.owned && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-sea-400">
+                        shared
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Link href="/children" className="btn-primary">
+              ➕ Add a child
+            </Link>
+          )}
         </div>
 
         {/* Sent messages are sealed forever, so we only ever surface a count —
