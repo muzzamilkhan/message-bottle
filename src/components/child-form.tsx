@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createChild,
   updateChild,
   type ChildFormState,
 } from "@/app/actions";
+import { ChildPhotoInput } from "@/components/child-photo-input";
 import { CHILD_AVATARS, DEFAULT_AVATAR } from "@/lib/avatars";
 
 export type EditableChild = {
@@ -33,7 +34,26 @@ export function ChildForm({
     {},
   );
   const [avatar, setAvatar] = useState<string>(child?.avatar ?? DEFAULT_AVATAR);
+  // The compressed photo and whether the parent has touched it this session.
+  // Held here (not echoed through the action's `values`) so an error re-render
+  // keeps it without a ~9 KB round trip.
+  const [photo, setPhoto] = useState<string | null>(child?.photo ?? null);
+  const [photoTouched, setPhotoTouched] = useState(false);
+  // ChildPhotoInput seeds its own preview state from `initialPhoto` only at
+  // mount, so changing that prop after a create doesn't clear a stale
+  // preview. Bumping this key forces a remount instead.
+  const [photoInputKey, setPhotoInputKey] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Stable identity so ChildPhotoInput's reporting effect doesn't re-run every
+  // render.
+  const handlePhotoChange = useCallback(
+    (next: string | null, touched: boolean) => {
+      setPhoto(next);
+      setPhotoTouched(touched);
+    },
+    [],
+  );
 
   // On success, reset a create form for next time, then let the parent collapse
   // itself (an edit card, or the add-a-child section).
@@ -42,6 +62,9 @@ export function ChildForm({
     if (!editing) {
       formRef.current?.reset();
       setAvatar(DEFAULT_AVATAR);
+      setPhoto(null);
+      setPhotoTouched(false);
+      setPhotoInputKey((k) => k + 1);
     }
     onSaved?.();
   }, [state.ok, editing, onSaved]);
@@ -65,9 +88,25 @@ export function ChildForm({
         />
       </div>
 
+      <ChildPhotoInput
+        key={photoInputKey}
+        initialPhoto={child?.photo ?? null}
+        onChange={handlePhotoChange}
+      />
+
       <div>
-        <span className="field-label">Pick an avatar</span>
+        <span className="field-label">
+          {photo ? "Or pick an avatar instead" : "Pick an avatar"}
+        </span>
         <input type="hidden" name="avatar" value={avatar} />
+        <input type="hidden" name="photo" value={photo ?? ""} />
+        <input
+          type="hidden"
+          name="photoAction"
+          // Untouched edits leave the column alone; a create always states its
+          // intent outright.
+          value={photoTouched || !editing ? (photo ? "set" : "clear") : "keep"}
+        />
         <div className="flex flex-wrap gap-2">
           {CHILD_AVATARS.map((emoji) => (
             <button
