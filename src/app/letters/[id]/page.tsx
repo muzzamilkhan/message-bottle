@@ -29,6 +29,10 @@ export default async function EditDraftPage({
   }
 
   const children = await getAccessibleChildren(session.user.id);
+  // A draft is already addressed to a child, so lock it and hide the picker.
+  const lockedChild = letter.childId
+    ? children.find((c) => c.id === letter.childId)
+    : undefined;
 
   return (
     <>
@@ -50,6 +54,7 @@ export default async function EditDraftPage({
 
         <LetterForm
           children={children}
+          lockedChild={lockedChild}
           letter={{
             id: letter.id,
             title: letter.title,

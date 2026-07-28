@@ -21,9 +21,13 @@ type ExistingLetter = {
 export function LetterForm({
   children,
   letter,
+  lockedChild,
 }: {
   children: ChildOption[];
   letter?: ExistingLetter;
+  // When the recipient is already decided (started from a child's avatar, or an
+  // existing draft), the picker is hidden and the letter is fixed to this child.
+  lockedChild?: { id: string; name: string; avatar: string };
 }) {
   const [state, formAction] = useActionState<LetterFormState, FormData>(
     saveLetter,
@@ -62,32 +66,48 @@ export function LetterForm({
         />
       </div>
 
-      <div>
-        <label htmlFor="childId" className="field-label">
-          Who is it for?
-        </label>
-        <select
-          id="childId"
-          name="childId"
-          className="field-input"
-          defaultValue={letter?.childId ?? ""}
-        >
-          <option value="">Choose a child…</option>
-          {children.map((child) => (
-            <option key={child.id} value={child.id}>
-              {child.avatar} {child.name}
-              {child.owned === false ? " (shared with you)" : ""}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-sea-500">
-          Manage kids on the{" "}
-          <a href="/children" className="font-semibold text-blush-400 underline">
-            your kids
-          </a>{" "}
-          page.
-        </p>
-      </div>
+      {lockedChild ? (
+        <div>
+          <span className="field-label">Who is it for?</span>
+          <div className="flex items-center gap-3 rounded-2xl bg-sea-50 px-4 py-3 ring-1 ring-sea-100">
+            <span className="text-2xl">{lockedChild.avatar}</span>
+            <span className="font-semibold text-sea-800">
+              {lockedChild.name}
+            </span>
+          </div>
+          <input type="hidden" name="childId" value={lockedChild.id} />
+        </div>
+      ) : (
+        <div>
+          <label htmlFor="childId" className="field-label">
+            Who is it for?
+          </label>
+          <select
+            id="childId"
+            name="childId"
+            className="field-input"
+            defaultValue={letter?.childId ?? ""}
+          >
+            <option value="">Choose a child…</option>
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.avatar} {child.name}
+                {child.owned === false ? " (shared with you)" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-sea-500">
+            Manage kids on the{" "}
+            <a
+              href="/children"
+              className="font-semibold text-blush-400 underline"
+            >
+              your kids
+            </a>{" "}
+            page.
+          </p>
+        </div>
+      )}
 
       <div>
         <label htmlFor="body" className="field-label">
