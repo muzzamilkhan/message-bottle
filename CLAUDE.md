@@ -15,11 +15,16 @@ git config core.hooksPath .githooks
 ```
 
 It checks the working tree rather than the staged snapshot — fine here, where commits are
-whole-file. Use `git commit --no-verify` to bypass it deliberately.
+whole-file.
 
-`.github/workflows/ci.yml` runs the same three checks on every push and PR to `main`. Since
-the hook is opt-in per clone and skippable, CI is the actual guarantee that `main` stays
-green — keep the two in step when adding a check to either. CI pins **Node 24** because the
+**Never skip the hook.** Do not use `git commit --no-verify`, and do not unset
+`core.hooksPath`, disable a check, or narrow its scope to get a commit through. If the hook
+fails, fix what it caught. If the failure is in code you didn't touch, say so and stop
+rather than committing around it — a red check is a finding, not an obstacle.
+
+`.github/workflows/ci.yml` runs the same three checks on every push and PR to `main`. The
+hook is opt-in per clone, so CI is the backstop that keeps `main` green — keep the two in
+step when adding a check to either. CI pins **Node 24** because the
 tests depend on its native TypeScript stripping, and runs the checks rather than
 `npm run build`, which would need a live database.
 
