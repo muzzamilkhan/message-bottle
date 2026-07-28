@@ -17,8 +17,20 @@ npm run db:push      # apply prisma/schema.prisma to the database
 npm run db:studio    # Prisma Studio
 ```
 
-There is no test suite or test runner in this repo. Verify changes by exercising the
+There is no test suite or test runner in this repo yet. Verify changes by exercising the
 running dev server.
+
+## Testing philosophy
+
+Keep tests lean. Test **pure functions** — date/age math, countdown formatting, input
+parsing and validation — and don't test server components, Prisma queries, or React
+rendering. Where a server action or page grows non-trivial logic, move that logic into a
+pure helper in `src/lib/` that takes plain values and returns plain values, then test the
+helper. The action keeps auth, the database call, and `revalidatePath`; the rules live in
+a lib.
+
+A good smell test: if verifying a rule requires a session, a database, or a rendered DOM,
+the rule is in the wrong place.
 
 Note that `npm run build` runs `prisma db push --accept-data-loss` against `DATABASE_URL`
 before building — it is not a read-only check.
