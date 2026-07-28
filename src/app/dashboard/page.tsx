@@ -70,11 +70,6 @@ export default async function Dashboard() {
                     <span className="max-w-full truncate text-sm font-semibold text-sea-800">
                       {child.name}
                     </span>
-                    {!child.owned && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-sea-400">
-                        shared
-                      </span>
-                    )}
                   </Link>
                 </li>
               ))}

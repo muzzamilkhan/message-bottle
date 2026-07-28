@@ -75,18 +75,12 @@ export async function saveLetter(
   if (!parsed.ok) return { error: letterInputMessage(parsed.error) };
   const { title, childId, body, sealing: submitting } = parsed.value;
 
-  // Verify the chosen child belongs to this user (or was shared with them by a
-  // co-parent) and grab a name snapshot. A child is optional for a draft.
+  // Verify the chosen child belongs to this user and grab a name snapshot.
+  // A child is optional for a draft.
   let child: { id: string; name: string } | null = null;
   if (childId) {
     child = await prisma.child.findFirst({
-      where: {
-        id: childId,
-        OR: [
-          { parentId: session.user.id },
-          { shares: { some: { parentId: session.user.id } } },
-        ],
-      },
+      where: { id: childId, parentId: session.user.id },
       select: { id: true, name: true },
     });
     if (!child) {
@@ -415,24 +409,23 @@ export async function deleteChild(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  // Only the owner may remove a child. Removing a child is destructive: every
-  // letter written to them — drafts and sealed alike, from any co-parent — is
-  // deleted forever, and the private open link stops working.
+  // Removing a child is destructive: every letter written to them — drafts and
+  // sealed alike — is deleted forever, and the private open link stops working.
   const child = await prisma.child.findFirst({
     where: { id, parentId: session.user.id },
     select: { id: true },
   });
   if (!child) return;
 
-  // Every letter written to this child, from every co-parent, drafts and
-  // sealed alike — and the photos inside them.
+  // Every letter written to this child, drafts and sealed alike — and the
+  // photos inside them.
   //
   // The pathnames are collected inside the same transaction that deletes the
   // letters, so the list is taken from the same snapshot the delete acts on. A
-  // co-parent attaching an image to one of these letters concurrently either
-  // lands before the snapshot (and is collected) or after the delete (and has
-  // no letter to attach to) — it can't slip between the two and leave its blob
-  // orphaned in storage.
+  // concurrent save attaching an image to one of these letters — a second tab
+  // mid-edit — either lands before the snapshot (and is collected) or after the
+  // delete (and has no letter to attach to); it can't slip between the two and
+  // leave its blob orphaned in storage.
   const pathnames = await prisma.$transaction(async (tx) => {
     const images = await tx.letterImage.findMany({
       where: { letter: { childId: child.id } },
@@ -473,140 +466,4 @@ export async function deleteLetter(formData: FormData): Promise<void> {
   await prisma.letter.delete({ where: { id: draft.id } });
 
   revalidatePath("/dashboard");
-}
-
-// ----- Parent access sharing -----
-
-export type ShareInviteFormState = { error?: string; token?: string };
-
-// Create a share link that grants a co-parent access to the selected children.
-// Only the owner of a child may include it in an invite. Returns the invite
-// token so the client can build a copyable link.
-export async function createShareInvite(
-  _prev: ShareInviteFormState,
-  formData: FormData,
-): Promise<ShareInviteFormState> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { error: "You need to be signed in to share access." };
-  }
-
-  const childIds = formData
-    .getAll("childIds")
-    .map((v) => String(v))
-    .filter(Boolean);
-
-  if (childIds.length === 0) {
-    return { error: "Pick at least one child to share." };
-  }
-
-  // Keep only children this user actually owns — you can't share someone
-  // else's kids, even if they were shared with you.
-  const owned = await prisma.child.findMany({
-    where: { id: { in: childIds }, parentId: session.user.id },
-    select: { id: true },
-  });
-  if (owned.length === 0) {
-    return { error: "Please choose one of your own children." };
-  }
-
-  const token = randomBytes(24).toString("base64url");
-
-  await prisma.shareInvite.create({
-    data: {
-      token,
-      inviterId: session.user.id,
-      children: { create: owned.map((c) => ({ childId: c.id })) },
-    },
-  });
-
-  revalidatePath("/share");
-  return { token };
-}
-
-// Owner cancels a pending invite they created.
-export async function revokeInvite(formData: FormData): Promise<void> {
-  const session = await auth();
-  if (!session?.user?.id) return;
-
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-
-  await prisma.shareInvite.updateMany({
-    where: { id, inviterId: session.user.id, status: "PENDING" },
-    data: { status: "REVOKED" },
-  });
-
-  revalidatePath("/share");
-}
-
-// Owner removes a co-parent's access to one of their children.
-export async function revokeShare(formData: FormData): Promise<void> {
-  const session = await auth();
-  if (!session?.user?.id) return;
-
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-
-  // Only the child's owner can revoke a share.
-  await prisma.childShare.deleteMany({
-    where: { id, child: { parentId: session.user.id } },
-  });
-
-  revalidatePath("/share");
-}
-
-export type AcceptInviteFormState = { error?: string };
-
-// The receiver accepts an invite, gaining write access to its children. The
-// grant is idempotent, so re-accepting an already-accepted link is harmless.
-export async function acceptShareInvite(
-  _prev: AcceptInviteFormState,
-  formData: FormData,
-): Promise<AcceptInviteFormState> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { error: "Please sign in to accept this invite." };
-  }
-
-  const token = String(formData.get("token") ?? "").trim();
-  if (!token) return { error: "This invite link looks broken." };
-
-  const invite = await prisma.shareInvite.findUnique({
-    where: { token },
-    include: { children: { select: { childId: true } } },
-  });
-
-  if (!invite || invite.status === "REVOKED") {
-    return { error: "This invite is no longer available." };
-  }
-  if (invite.inviterId === session.user.id) {
-    return { error: "This is your own invite — share the link with a co-parent." };
-  }
-
-  const userId = session.user.id;
-
-  await prisma.$transaction([
-    // Grant access to every child on the invite, ignoring any that were
-    // already granted (unique childId+parentId).
-    prisma.childShare.createMany({
-      data: invite.children.map((c) => ({
-        childId: c.childId,
-        parentId: userId,
-      })),
-      skipDuplicates: true,
-    }),
-    prisma.shareInvite.update({
-      where: { id: invite.id },
-      data: {
-        status: "ACCEPTED",
-        acceptedById: userId,
-        acceptedAt: new Date(),
-      },
-    }),
-  ]);
-
-  revalidatePath("/dashboard");
-  revalidatePath("/letters/new");
-  redirect("/dashboard");
 }

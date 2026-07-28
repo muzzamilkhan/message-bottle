@@ -19,12 +19,6 @@ model User {
   sessions        Session[]
   letters         Letter[]
   children        Child[]
-  // Children that other parents have shared access to with this user.
-  sharedChildren  ChildShare[]  @relation("SharedChildren")
-  // Invites this user has created to give co-parents access.
-  sentInvites     ShareInvite[] @relation("SentInvites")
-  // Invites this user has accepted.
-  acceptedInvites ShareInvite[] @relation("AcceptedInvites")
   createdAt       DateTime      @default(now())
   // Subscription tier. Null means free. Read through canUploadImages in
   // src/lib/subscription.ts — never compared directly — so adding a tier is a
@@ -88,14 +82,12 @@ model Child {
   // Random, unguessable token for the child's self-authenticating open link
   // (/open/<token>). Generated when a bottle timer is first set.
   openToken   String?       @unique
-  // The owner of this child profile. Owners can share access with co-parents.
+  // The one parent who owns this child profile. There is no shared access:
+  // only the owner can write letters to them, and only the owner can delete
+  // them along with every photo inside those letters.
   parent      User          @relation(fields: [parentId], references: [id], onDelete: Cascade)
   parentId    String
   letters     Letter[]
-  // Co-parents who have been granted access to write letters to this child.
-  shares      ChildShare[]
-  // Pending/accepted invites that include this child.
-  inviteLinks InviteChild[]
   createdAt   DateTime      @default(now())
 
   @@index([parentId])
@@ -152,52 +144,4 @@ model LetterImage {
   @@index([letterId])
   // The orphan sweep queries one author's unattached rows by age.
   @@index([authorId, createdAt])
-}
-
-// ----- Parent access sharing -----
-
-// A grant of access: `parent` (a co-parent) may write letters to `child`.
-// Created when a co-parent accepts a ShareInvite. The child's owner keeps
-// full control and can revoke a share at any time.
-model ChildShare {
-  id        String   @id @default(cuid())
-  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  childId   String
-  parent    User     @relation("SharedChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  parentId  String
-  createdAt DateTime @default(now())
-
-  @@unique([childId, parentId])
-  @@index([parentId])
-  @@index([childId])
-}
-
-// A share link a parent generates to invite a co-parent. Anyone who opens the
-// link can accept it once signed in (creating an account first if needed).
-model ShareInvite {
-  id           String        @id @default(cuid())
-  // The random, unguessable token embedded in the share link.
-  token        String        @unique
-  inviter      User          @relation("SentInvites", fields: [inviterId], references: [id], onDelete: Cascade)
-  inviterId    String
-  // "PENDING", "ACCEPTED", or "REVOKED".
-  status       String        @default("PENDING")
-  children     InviteChild[]
-  acceptedBy   User?         @relation("AcceptedInvites", fields: [acceptedById], references: [id], onDelete: SetNull)
-  acceptedById String?
-  acceptedAt   DateTime?
-  createdAt    DateTime      @default(now())
-
-  @@index([inviterId])
-}
-
-// Join table: which children a given invite grants access to.
-model InviteChild {
-  invite   ShareInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
-  inviteId String
-  child    Child       @relation(fields: [childId], references: [id], onDelete: Cascade)
-  childId  String
-
-  @@id([inviteId, childId])
-  @@index([childId])
 }

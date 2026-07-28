@@ -18,12 +18,6 @@ export function Header({ userName }: { userName?: string | null }) {
           >
             👧 Kids
           </Link>
-          <Link
-            href="/share"
-            className="text-sm font-semibold text-sea-600 hover:text-sea-800"
-          >
-            🔗 Share
-          </Link>
           {userName ? (
             <span className="hidden text-sm text-sea-600 sm:inline">
               Hi, {userName.split(" ")[0]} 👋

@@ -22,9 +22,6 @@ login), and **Tailwind CSS** for the cute seaside theme. Deploys cleanly to
 - 🍾 Every child has a required **bottle timer** — the age (older than they are
   now) at which they can open their bottles from a private, self-authenticating
   link (`/open/<token>`), no account needed
-- 🔗 Share a child with a co-parent via an invite link — they sign in (creating
-  an account if needed), accept, and can then write their own letters to that
-  child too
 
 ## Getting started
 
@@ -78,39 +75,21 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Project structure
 
 ```
-prisma/schema.prisma        Database models (User, Child, Letter, sharing)
+prisma/schema.prisma        Database models (User, Child, Letter, LetterImage)
 src/auth.ts                 Auth.js configuration (Google + Prisma adapter)
 src/lib/prisma.ts           Prisma client singleton
 src/lib/letters.ts          Date + countdown helpers
-src/lib/children.ts         Accessible-children helpers (owned + shared)
-src/app/actions.ts          Server actions: letters, children, and sharing
+src/lib/children.ts         Child access helpers (a child has one owner)
+src/app/actions.ts          Server actions: letters and children
 src/app/page.tsx            Landing page
 src/app/dashboard/          Sent-message count + editable drafts
 src/app/children/           Manage/edit your kids + set their bottle timer
 src/app/open/[token]/       A child's self-authenticating open page (age-gated)
 src/lib/age.ts              Age helpers for the bottle timer
-src/app/share/              Invite a co-parent and manage shared access
-src/app/invite/[token]/     Accept a share invite (signs in if needed)
 src/app/letters/new/        Write-a-letter form
 src/app/letters/[id]/       Edit a draft letter (sent letters are sealed)
 src/components/             UI: header, auth buttons, bottle illustration, forms
 ```
-
-## Sharing access with a co-parent
-
-A child is owned by the parent who created it. From the **Share** page you pick
-which of your kids to share and generate an invite link. Sharing works like so:
-
-1. The link carries a random, unguessable token (`ShareInvite`).
-2. The other parent opens it. If they aren't signed in, signing in with Google
-   creates their account, then returns them to the invite to accept.
-3. Accepting creates a `ChildShare` grant, after which the co-parent can address
-   letters to that child — each parent still owns and sees only their own
-   letters. The child seeing both parents' letters at once is a future
-   child-view feature.
-
-Owners stay in control: they can cancel a pending invite or remove a co-parent's
-access at any time from the Share page.
 
 ## A note on the time-lock
 

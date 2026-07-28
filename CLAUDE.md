@@ -107,13 +107,16 @@ reset. Successful actions call `revalidatePath` on each affected route before re
 
 ### Two access models
 
-1. **Parent (authenticated).** Ownership is `Child.parentId`. Co-parents get write access
-   through a `ChildShare` grant, created when they accept a `ShareInvite` link. Anything
-   reading children for a signed-in user must consider both — use
-   `getAccessibleChildren` / `canAccessChild` in `src/lib/children.ts`, or replicate the
-   `OR: [{ parentId }, { shares: { some: { parentId } } }]` clause. Only an **owner** may
-   edit/delete a child, share it, or revoke access; co-parents may only address letters
-   to it.
+1. **Parent (authenticated).** Ownership is `Child.parentId`, and it is the whole model:
+   a child belongs to exactly one parent, who alone may address letters to them, edit
+   them, or delete them. Read children through `getAccessibleChildren` / `canAccessChild`
+   in `src/lib/children.ts` rather than querying `parentId` inline.
+
+   There is deliberately **no sharing between parents**. It existed once (`ChildShare`,
+   `ShareInvite`) and was removed: a co-parent's letter photos lived under a child they
+   didn't own, so they could neither delete that child nor pull their own images back out
+   — only the owner could. Sole ownership is what makes "delete the child, and every
+   photo goes with it" a promise the app can actually keep. Don't reintroduce it.
 2. **Child (unauthenticated).** `/open/[token]` is self-authenticating: the unguessable
    `Child.openToken` *is* the credential. Tokens are `randomBytes(24).toString("base64url")`.
 
@@ -140,8 +143,8 @@ present, so normal opens cost no flag lookup.
 
 Letter bodies may contain `[[img:<id>]]` markers referencing `LetterImage` rows. The bytes
 live in a **private** Vercel Blob store — unreadable by URL — and are served only by
-`/api/letter-image/[id]`, which authorizes every request as the author, a co-parent with
-access to the child, or the child themselves via `openToken` **after the age gate passes**.
+`/api/letter-image/[id]`, which authorizes every request as the author, the owner of the
+child, or the child themselves via `openToken` **after the age gate passes**.
 The time lock covers photos exactly as it covers text.
 
 Uploading is gated on `User.subscription` through `canUploadImages`; **reading never is**,
@@ -162,5 +165,5 @@ be set in the past.
 ### Deleting a child
 
 `deleteChild` transactionally deletes every letter written to that child — drafts and
-sealed letters, from all co-parents — and breaks the open link. `Letter.recipientName` is a
+sealed letters alike — and breaks the open link. `Letter.recipientName` is a
 name snapshot kept so letters read correctly even if the child profile changes.

@@ -111,7 +111,6 @@ export function LetterForm({
             {childOptions.map((child) => (
               <option key={child.id} value={child.id}>
                 {child.avatar} {child.name}
-                {child.owned === false ? " (shared with you)" : ""}
               </option>
             ))}
           </select>

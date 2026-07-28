@@ -81,8 +81,11 @@ async function isAuthorized(
   // 1. The author, who may be mid-draft.
   if (viewerId && viewerId === image.authorId) return true;
 
-  // 2. A co-parent with access to the child this letter is addressed to.
-  //    Reuses the shared helper rather than replicating the OR clause.
+  // 2. The owner of the child this letter is addressed to. Now that sharing is
+  //    gone the author always *is* the owner, so this can only still fire for
+  //    letters written to someone else's child under the old shared-access
+  //    model. Kept deliberately: it fails closed for those rows rather than
+  //    handing them to whoever asks.
   if (viewerId && image.letter?.childId) {
     if (await canAccessChild(viewerId, image.letter.childId)) return true;
   }

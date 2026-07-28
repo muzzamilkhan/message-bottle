@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { AddChildSection } from "@/components/add-child-section";
 import { ChildCard, type ChildCardData } from "@/components/child-card";
-import { ChildAvatar } from "@/components/child-avatar";
 import { formatDate } from "@/lib/letters";
 import { describeBottleTimer } from "@/lib/age";
 
@@ -13,33 +12,19 @@ export default async function ChildrenPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const [children, sharedChildren] = await Promise.all([
-    prisma.child.findMany({
-      where: { parentId: session.user.id },
-      orderBy: { createdAt: "asc" },
-      include: {
-        _count: { select: { letters: true } },
-        // Every letter written to this child, from every co-parent, drafts
-        // and sealed alike — matches the set `deleteChild` destroys — so the
-        // photo total below covers exactly what the warning must promise.
-        letters: {
-          select: { _count: { select: { images: true } } },
-        },
+  const children = await prisma.child.findMany({
+    where: { parentId: session.user.id },
+    orderBy: { createdAt: "asc" },
+    include: {
+      _count: { select: { letters: true } },
+      // Every letter written to this child, drafts and sealed alike — matches
+      // the set `deleteChild` destroys — so the photo total below covers
+      // exactly what the warning must promise.
+      letters: {
+        select: { _count: { select: { images: true } } },
       },
-    }),
-    // Children other parents have shared with this user.
-    prisma.child.findMany({
-      where: { shares: { some: { parentId: session.user.id } } },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        name: true,
-        avatar: true,
-        photo: true,
-        parent: { select: { name: true } },
-      },
-    }),
-  ]);
+    },
+  });
 
   // Shape each owned child for the interactive card, precomputing the
   // bottle-timer labels on the server.
@@ -108,29 +93,6 @@ export default async function ChildrenPage() {
           </section>
         </div>
 
-        {sharedChildren.length > 0 && (
-          <section className="mt-10">
-            <h2 className="mb-1 text-lg font-bold text-sea-800">
-              Shared with you
-            </h2>
-            <p className="mb-3 text-sm text-sea-600">
-              Kids another parent has invited you to write to.
-            </p>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {sharedChildren.map((child) => (
-                <li key={child.id} className="card flex items-center gap-4">
-                  <ChildAvatar child={child} name={child.name} size="lg" />
-                  <div className="flex-1">
-                    <p className="font-bold text-sea-800">{child.name}</p>
-                    <p className="text-xs text-sea-500">
-                      Shared by {child.parent.name ?? "another parent"}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </main>
     </>
   );
