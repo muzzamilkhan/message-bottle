@@ -18,13 +18,18 @@ export function LetterSelectionToolbar({
   if (!position) return null;
 
   return (
+    // Keeping the selection alive is the whole job of the mousedown handler
+    // below. A plain group isn't an interactive role, so jsx-a11y wants the
+    // listener on something focusable — but making this focusable is exactly
+    // what would steal the selection, so the rule doesn't apply here.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       // Fixed, because the coordinates come from getBoundingClientRect.
       style={{ top: position.top, left: position.left }}
       className="fixed z-50 flex -translate-x-1/2 -translate-y-full gap-1 rounded-xl bg-sea-800 p-1 shadow-lg"
-      // Keeping the selection alive is the whole job of this handler.
       onMouseDown={(event) => event.preventDefault()}
-      role="toolbar"
+      role="group"
+      aria-label="Text formatting"
     >
       <button
         type="button"
