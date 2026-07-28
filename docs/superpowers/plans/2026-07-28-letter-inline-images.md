@@ -942,31 +942,21 @@ export function parseLetterInput(
 Run: `node --test src/lib/letter-input.test.ts`
 Expected: PASS, all tests.
 
-Note: `npm run typecheck` will now fail on `src/app/actions.ts`, which still calls `parseLetterInput` with two arguments. Task 7 fixes that call site. To keep this commit green, apply the minimal call-site update now — in `src/app/actions.ts`, change the call to pass a placeholder context that Task 7 replaces with the real lookup:
+Note: `npm run typecheck` will now fail on `src/app/actions.ts`, which still calls `parseLetterInput` with two arguments. **Do not** paper over this with a hardcoded permissive placeholder — a commit containing `mayHoldImages: true` is a hardcoded auth bypass, however briefly it lives.
 
-```ts
-  const parsed = parseLetterInput(
-    {
-      title: String(formData.get("title") ?? ""),
-      childId: String(formData.get("childId") ?? ""),
-      body: String(formData.get("body") ?? ""),
-    },
-    parseLetterIntent(String(formData.get("intent") ?? "")),
-    // Replaced in Task 7 with the author's real entitlement and the body's
-    // real image count.
-    { hasImages: false, mayHoldImages: true },
-  );
-```
+The real call site needs `User.subscription`, which Task 5 adds. So the call-site update is deferred to Task 5 Step 3a, and **this task's commit is expected to leave typecheck failing on that one call**. That is the deliberate cost of not committing a permissive default.
 
-- [ ] **Step 5: Verify and commit**
+Commit this task with `npm test` green and note the known typecheck failure in your report. The pre-commit hook runs typecheck and will block the commit — so commit the lib and its tests together with the call-site fix in Task 5 instead. Concretely: **do not commit at the end of this task.** Leave the working tree dirty, report DONE_WITH_CONCERNS naming the pending call site, and Task 5 makes the single green commit covering both.
 
-Run: `npm test && npm run typecheck && npm run lint`
-Expected: all pass.
+- [ ] **Step 5: Verify tests, and stop without committing**
 
-```bash
-git add src/lib/letter-input.ts src/lib/letter-input.test.ts src/app/actions.ts
-git commit -m "Block sealing a letter holding images the author may no longer hold"
-```
+Run: `npm test`
+Expected: all pass, including the new cases.
+
+Run: `npm run typecheck`
+Expected: **one failure** in `src/app/actions.ts` — `parseLetterInput` called with 2 arguments, 3 expected. This is the known, deliberate state described in Step 4.
+
+Do not commit. Do not add a placeholder argument to silence it. Leave the working tree dirty and report `DONE_WITH_CONCERNS`, naming the failing call site. Task 5 commits this work together with the real call-site fix.
 
 ---
 
@@ -1067,6 +1057,56 @@ model LetterImage {
 Run: `npm run db:push`
 Expected: the two models sync. Both changes are additive — existing letters have no images and every existing user is free — so there is no backfill.
 
+- [ ] **Step 4a: Wire the real entitlement into `saveLetter`**
+
+Task 4 left `parseLetterInput`'s third argument unwired because the column it reads didn't exist yet. It does now. In `src/app/actions.ts`, add the imports:
+
+```ts
+import { canUploadImages } from "@/lib/subscription";
+import { letterImageIds } from "@/lib/letter-body";
+```
+
+Then replace the `parseLetterInput` call in `saveLetter` with the real lookup:
+
+```ts
+  const body = String(formData.get("body") ?? "");
+  const author = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscription: true },
+  });
+
+  const parsed = parseLetterInput(
+    {
+      title: String(formData.get("title") ?? ""),
+      childId: String(formData.get("childId") ?? ""),
+      body,
+    },
+    parseLetterIntent(String(formData.get("intent") ?? "")),
+    {
+      hasImages: letterImageIds(body).length > 0,
+      mayHoldImages: canUploadImages(author?.subscription),
+    },
+  );
+```
+
+Task 7 adds reconciliation to this same function but does not change this call.
+
+- [ ] **Step 4b: Raise the server action body limit**
+
+A compressed image can reach 600 KB, and Next's server actions default to a 1 MB body — too close for comfort once form fields are added. In `next.config.ts` (or `.mjs`), set:
+
+```ts
+  experimental: {
+    serverActions: {
+      // One compressed letter image is capped at 600 KB; this leaves room for
+      // it plus form fields without an opaque 413.
+      bodySizeLimit: "2mb",
+    },
+  },
+```
+
+If the config file has no `experimental` key, add it alongside the existing exported config object rather than replacing it.
+
 - [ ] **Step 5: Write the store wrapper**
 
 Create `src/lib/letter-image-store.ts`:
@@ -1159,8 +1199,12 @@ explicitly, **blobs first, then rows**.
 Run: `npm test && npm run typecheck && npm run lint`
 Expected: all pass.
 
+This commit also carries Task 4's uncommitted work, which was held back rather than committed with a placeholder auth value.
+
 ```bash
-git add prisma/schema.prisma src/lib/letter-image-store.ts .env.example CLAUDE.md package.json package-lock.json
+git add prisma/schema.prisma src/lib/letter-image-store.ts .env.example CLAUDE.md \
+  package.json package-lock.json next.config.ts \
+  src/lib/letter-input.ts src/lib/letter-input.test.ts src/app/actions.ts
 git commit -m "Add LetterImage, the subscription column, and the private blob store"
 ```
 
@@ -1342,11 +1386,9 @@ git commit -m "Serve letter images only through an authorized, age-gated route"
 
 - [ ] **Step 1: Add the upload action**
 
-In `src/app/actions.ts`, add these imports:
+In `src/app/actions.ts`, add these imports. `canUploadImages` and `letterImageIds` are already imported by Task 5 — don't duplicate them.
 
 ```ts
-import { canUploadImages } from "@/lib/subscription";
-import { letterImageIds } from "@/lib/letter-body";
 import {
   IMAGE_MAX_UPLOAD_BYTES,
   IMAGES_PER_LETTER,
@@ -1532,32 +1574,11 @@ export async function sweepOrphanedImages(authorId: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: Wire the entitlement and reconciliation into `saveLetter`**
+- [ ] **Step 3: Reconcile images when a letter is saved**
 
-Replace the placeholder context added in Task 4 with the real lookup. After the session check in `saveLetter`:
+Task 5 already wired the entitlement lookup into `saveLetter`; leave that call alone. This step only adds reconciliation after the letter is written.
 
-```ts
-  const body = String(formData.get("body") ?? "");
-  const author = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { subscription: true },
-  });
-
-  const parsed = parseLetterInput(
-    {
-      title: String(formData.get("title") ?? ""),
-      childId: String(formData.get("childId") ?? ""),
-      body,
-    },
-    parseLetterIntent(String(formData.get("intent") ?? "")),
-    {
-      hasImages: letterImageIds(body).length > 0,
-      mayHoldImages: canUploadImages(author?.subscription),
-    },
-  );
-```
-
-Then reconcile after the letter is written. In the update branch, after the `result.count === 0` check:
+In the update branch, after the `result.count === 0` check:
 
 ```ts
     await reconcileLetterImages({
