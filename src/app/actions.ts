@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { CHILD_AVATARS, DEFAULT_AVATAR } from "@/lib/avatars";
+import { ageInYears } from "@/lib/age";
 
 export type LetterFormState = { error?: string };
 
@@ -72,20 +73,23 @@ export async function createLetter(
   redirect("/dashboard");
 }
 
-export type ChildFormState = { error?: string };
+export type ChildFormState = { error?: string; ok?: boolean };
 
-export async function createChild(
-  _prev: ChildFormState,
-  formData: FormData,
-): Promise<ChildFormState> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { error: "You need to be signed in." };
-  }
+// Parse and validate the shared child fields (name, avatar, full birthday, and
+// the optional bottle-timer age). Returns either an error message or the clean
+// values ready to persist.
+type ParsedChild = {
+  name: string;
+  avatar: string;
+  birthday: Date | null;
+  openAtAge: number | null;
+};
 
+function parseChildInput(formData: FormData): { error: string } | ParsedChild {
   const name = String(formData.get("name") ?? "").trim();
   const avatarRaw = String(formData.get("avatar") ?? "").trim();
   const birthdayRaw = String(formData.get("birthday") ?? "").trim();
+  const openAtAgeRaw = String(formData.get("openAtAge") ?? "").trim();
 
   if (!name) {
     return { error: "Please give your child a name." };
@@ -97,20 +101,111 @@ export async function createChild(
 
   let birthday: Date | null = null;
   if (birthdayRaw) {
-    const parsed = new Date(birthdayRaw);
+    // Parse a full calendar date (yyyy-mm-dd) at UTC noon so the day can't drift
+    // across timezones when it's formatted back later.
+    const parsed = new Date(`${birthdayRaw}T12:00:00Z`);
     if (Number.isNaN(parsed.getTime())) {
       return { error: "That birthday doesn't look right." };
     }
     birthday = parsed;
   }
 
+  let openAtAge: number | null = null;
+  if (openAtAgeRaw) {
+    const age = Number(openAtAgeRaw);
+    if (!Number.isInteger(age) || age < 1 || age > 150) {
+      return { error: "The bottle-timer age should be a whole number of years." };
+    }
+    if (!birthday) {
+      return {
+        error: "Add a birthday first — the bottle timer counts from it.",
+      };
+    }
+    const currentAge = ageInYears(birthday);
+    if (age <= currentAge) {
+      return {
+        error: `Pick an age older than ${name} is now (currently ${currentAge}).`,
+      };
+    }
+    openAtAge = age;
+  }
+
+  return { name, avatar, birthday, openAtAge };
+}
+
+export async function createChild(
+  _prev: ChildFormState,
+  formData: FormData,
+): Promise<ChildFormState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "You need to be signed in." };
+  }
+
+  const parsed = parseChildInput(formData);
+  if ("error" in parsed) return parsed;
+
   await prisma.child.create({
-    data: { name, avatar, birthday, parentId: session.user.id },
+    data: {
+      name: parsed.name,
+      avatar: parsed.avatar,
+      birthday: parsed.birthday,
+      openAtAge: parsed.openAtAge,
+      // Mint the self-authenticating open token upfront when a timer is set.
+      openToken: parsed.openAtAge ? randomBytes(24).toString("base64url") : null,
+      parentId: session.user.id,
+    },
   });
 
   revalidatePath("/children");
   revalidatePath("/letters/new");
-  return {};
+  return { ok: true };
+}
+
+// Edit an existing child's details, including the full birthday and the
+// bottle-timer age. Only the owner may edit.
+export async function updateChild(
+  _prev: ChildFormState,
+  formData: FormData,
+): Promise<ChildFormState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "You need to be signed in." };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "We couldn't tell which child to update." };
+
+  const existing = await prisma.child.findFirst({
+    where: { id, parentId: session.user.id },
+    select: { id: true, openToken: true },
+  });
+  if (!existing) {
+    return { error: "That child isn't one you can edit." };
+  }
+
+  const parsed = parseChildInput(formData);
+  if ("error" in parsed) return parsed;
+
+  // Keep an existing token stable; only mint one when a timer is newly set.
+  const openToken = parsed.openAtAge
+    ? existing.openToken ?? randomBytes(24).toString("base64url")
+    : existing.openToken;
+
+  await prisma.child.update({
+    where: { id: existing.id },
+    data: {
+      name: parsed.name,
+      avatar: parsed.avatar,
+      birthday: parsed.birthday,
+      openAtAge: parsed.openAtAge,
+      openToken,
+    },
+  });
+
+  revalidatePath("/children");
+  revalidatePath("/letters/new");
+  return { ok: true };
 }
 
 export async function deleteChild(formData: FormData): Promise<void> {

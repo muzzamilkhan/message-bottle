@@ -4,8 +4,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { ChildForm } from "@/components/child-form";
-import { deleteChild } from "@/app/actions";
+import { ChildCard, type ChildCardData } from "@/components/child-card";
 import { formatDate } from "@/lib/letters";
+import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
 
 export default async function ChildrenPage() {
   const session = await auth();
@@ -25,6 +26,34 @@ export default async function ChildrenPage() {
     }),
   ]);
 
+  // Shape each owned child for the interactive card, precomputing the
+  // bottle-timer labels on the server.
+  const childCards: ChildCardData[] = children.map((child) => {
+    let timerLabel: string | null = null;
+    let unlocked = false;
+    if (child.openAtAge && child.birthday) {
+      unlocked = hasReachedOpenAge(child.birthday, child.openAtAge);
+      const openDate = birthdayAtAge(child.birthday, child.openAtAge);
+      timerLabel = unlocked
+        ? `Unlocked — ${child.name} can open their bottles now`
+        : `Opens at age ${child.openAtAge} · ${formatDate(openDate)}`;
+    }
+    return {
+      id: child.id,
+      name: child.name,
+      avatar: child.avatar,
+      birthday: child.birthday
+        ? child.birthday.toISOString().slice(0, 10)
+        : null,
+      openAtAge: child.openAtAge,
+      openToken: child.openToken,
+      lettersCount: child._count.letters,
+      birthdayLabel: child.birthday ? formatDate(child.birthday) : null,
+      timerLabel,
+      unlocked,
+    };
+  });
+
   return (
     <>
       <Header userName={session.user.name} />
@@ -39,7 +68,9 @@ export default async function ChildrenPage() {
           Your kids
         </h1>
         <p className="mb-6 text-sea-600">
-          Add a profile for each child, then address your letters to them.
+          Add a profile for each child, edit their details anytime, and set a
+          bottle timer — the age when they can open their letters from their own
+          private link.
         </p>
 
         <div className="grid gap-8 md:grid-cols-2">
@@ -54,34 +85,14 @@ export default async function ChildrenPage() {
                 ? `${children.length} kid${children.length > 1 ? "s" : ""}`
                 : "No kids yet"}
             </h2>
-            {children.length === 0 ? (
+            {childCards.length === 0 ? (
               <div className="card text-sea-600">
                 Add your first child using the form — they&apos;ll show up here.
               </div>
             ) : (
               <ul className="space-y-3">
-                {children.map((child) => (
-                  <li key={child.id} className="card flex items-center gap-4">
-                    <span className="text-4xl">{child.avatar}</span>
-                    <div className="flex-1">
-                      <p className="font-bold text-sea-800">{child.name}</p>
-                      <p className="text-xs text-sea-500">
-                        {child._count.letters} letter
-                        {child._count.letters === 1 ? "" : "s"}
-                        {child.birthday &&
-                          ` · 🎂 ${formatDate(child.birthday)}`}
-                      </p>
-                    </div>
-                    <form action={deleteChild}>
-                      <input type="hidden" name="id" value={child.id} />
-                      <button
-                        type="submit"
-                        className="text-sm font-semibold text-sea-400 hover:text-blush-500"
-                      >
-                        Remove
-                      </button>
-                    </form>
-                  </li>
+                {childCards.map((child) => (
+                  <ChildCard key={child.id} child={child} />
                 ))}
               </ul>
             )}

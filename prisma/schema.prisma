@@ -71,6 +71,12 @@ model Child {
   // A cute emoji avatar for the child.
   avatar      String        @default("🧒")
   birthday    DateTime?
+  // Bottle timer: the age at which this child may open their bottles via the
+  // self-authenticating link. Must be greater than their current age.
+  openAtAge   Int?
+  // Random, unguessable token for the child's self-authenticating open link
+  // (/open/<token>). Generated when a bottle timer is first set.
+  openToken   String?       @unique
   // The owner of this child profile. Owners can share access with co-parents.
   parent      User          @relation(fields: [parentId], references: [id], onDelete: Cascade)
   parentId    String

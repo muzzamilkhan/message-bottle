@@ -16,6 +16,10 @@ theme. Deploys cleanly to **Vercel**.
 - 🗓️ Time-lock: a letter stays sealed until its delivery date, then unlocks
 - 🌊 Dashboard of your bottles with a live countdown to each opening
 - 🗑️ Delete letters you own (ownership enforced on every read/write)
+- 👶 Add and **edit** each child's details (name, avatar, full birthday)
+- 🍾 Set a per-child **bottle timer** — an age (older than they are now) at which
+  they can open their bottles from a private, self-authenticating link
+  (`/open/<token>`), no account needed
 - 🔗 Share a child with a co-parent via an invite link — they sign in (creating
   an account if needed), accept, and can then write their own letters to that
   child too
@@ -84,7 +88,9 @@ src/app/actions.ts          Server actions: letters, children, and sharing
 src/app/api/upload/route.ts Photo upload endpoint (Vercel Blob)
 src/app/page.tsx            Landing page
 src/app/dashboard/          List of the signed-in user's bottles
-src/app/children/           Manage your kids (and see ones shared with you)
+src/app/children/           Manage/edit your kids + set their bottle timer
+src/app/open/[token]/       A child's self-authenticating open page (age-gated)
+src/lib/age.ts              Age + open-date helpers for the bottle timer
 src/app/share/              Invite a co-parent and manage shared access
 src/app/invite/[token]/     Accept a share invite (signs in if needed)
 src/app/letters/new/        Write-a-letter form
@@ -113,3 +119,17 @@ access at any time from the Share page.
 The lock is enforced on the server: `src/app/letters/[id]/page.tsx` only renders
 the letter body and photos once `deliverAt` has passed. Before then, no letter
 content is sent to the browser — just the sealed-bottle placeholder.
+
+## The bottle timer (a child's self-opening link)
+
+Each child can be given a **bottle timer**: an age, older than they are today,
+at which they may open their bottles themselves — without an account. Setting a
+timer mints a random, unguessable `openToken` and produces a private link
+(`/open/<token>`) you hand to the child.
+
+The link is self-authenticating (the token is the credential) but still fully
+time-locked on the server: `src/app/open/[token]/page.tsx` computes the child's
+age from their birthday and shows only the sealed collection until they reach the
+chosen age. Once they do, each letter still respects its own `deliverAt`, so a
+letter dated further out stays sealed. The required age is validated on the
+server against the child's current age, so a timer can never be set in the past.
