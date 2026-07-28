@@ -44,6 +44,26 @@
   }
 }
 
+/* Safari (iOS + macOS) ignores width/max-width on native date & number inputs
+   until their default appearance is reset, so the birthday field spills past
+   its card. Scope this to date/number only — selects keep their native arrow.
+   The native picker still opens on tap; padding above supplies the height. */
+input[type="date"].field-input,
+input[type="number"].field-input {
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* Left-align the value the way the other fields read, and stop the WebKit
+   spin buttons from re-introducing intrinsic width. */
+input[type="date"].field-input::-webkit-date-and-time-value {
+  text-align: left;
+}
+input[type="number"].field-input::-webkit-outer-spin-button,
+input[type="number"].field-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* gentle animated waves at the bottom of the page */
 .waves {
   background: repeating-linear-gradient(
