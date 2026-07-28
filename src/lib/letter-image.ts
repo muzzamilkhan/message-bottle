@@ -1,7 +1,7 @@
 // Pure geometry and validation for inline letter images. Kept free of canvas,
 // File, and the DOM so the rules can be tested with plain numbers and strings.
 // The canvas work that uses these lives in
-// src/components/letter-image-input.tsx.
+// src/components/use-letter-image-upload.ts.
 //
 // Sibling of child-photo.ts, with one deliberate difference: an avatar is
 // cropped to a fixed square, a letter photo keeps its shape.

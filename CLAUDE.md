@@ -81,8 +81,9 @@ the rule is in the wrong place.
 Pure libs take an **injectable clock** (`now`/`at` defaulting to `new Date()`) so date
 rules are deterministic under test. Validation libs return **error codes**, not copy, and
 the calling action maps a code to its message — so tests assert on rules and wording stays
-free to change. The tested libs are `age`, `letters`, `child-input`, `letter-input`, and
-`letter-stack-style`; `children.ts` and `prisma.ts` are DB access and stay untested.
+free to change. The tested libs are `age`, `letters`, `child-input`, `letter-input`, `letter-stack-style`,
+`letter-blocks`, and `letter-rich-text`; `children.ts` and `prisma.ts` are DB access and
+stay untested.
 
 Note that `npm run build` runs `prisma db push --accept-data-loss` against `DATABASE_URL`
 before building — it is not a read-only check.
@@ -155,6 +156,18 @@ Blob deletion is never automatic. `onDelete: Cascade` removes `LetterImage` rows
 letter but leaves the bytes, so every path that deletes letters — `deleteLetter`,
 `deleteChild`, save-time reconciliation, and the orphan sweep — must delete blobs
 explicitly, **blobs first, then rows**.
+
+Authors never see the marker. `src/components/letter-blocks-editor.tsx` presents the body
+as blocks — text blocks are `contenteditable` regions showing real bold and italic, photo
+blocks show the photograph — and `src/lib/letter-blocks.ts` converts to and from the stored
+string on every edit. The string is the format; blocks are only a view, which is what keeps
+`letterImageIds` and every blob-deletion path reading exactly what they always have.
+
+`src/lib/letter-rich-text.ts` turns the contenteditable's DOM back into that string, and it
+is the security boundary: an **allowlist that emits text**, so an element it doesn't
+recognise contributes only its text content and pasted markup arrives as prose. There is no
+sanitizer here and no `dangerouslySetInnerHTML` — adding a tag to that walker is the only
+way to widen what the editor accepts.
 
 ### Dates
 
