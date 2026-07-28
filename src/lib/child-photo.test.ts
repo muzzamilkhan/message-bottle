@@ -69,3 +69,101 @@ test("downscaleSteps", async (t) => {
     assert.deepEqual(downscaleSteps(160), [160]);
   });
 });
+
+import {
+  childPhotoMessage,
+  parsePhotoDataUrl,
+  PHOTO_MAX_BYTES,
+  type ChildPhotoError,
+} from "./child-photo.ts";
+
+// Build a data URL whose decoded payload is exactly `bytes` long.
+function dataUrlOfSize(bytes: number, mime = "image/webp"): string {
+  const base64 = Buffer.alloc(bytes, 7).toString("base64");
+  return `data:${mime};base64,${base64}`;
+}
+
+test("parsePhotoDataUrl", async (t) => {
+  await t.test("accepts each allowed mime type", () => {
+    for (const mime of ["image/webp", "image/jpeg", "image/png"]) {
+      const result = parsePhotoDataUrl(dataUrlOfSize(64, mime));
+      assert.deepEqual(result, { ok: true, mime, bytes: 64 });
+    }
+  });
+
+  await t.test("computes the decoded size for a padded payload", () => {
+    // "hello world" is 11 bytes and encodes with padding.
+    const url = `data:image/webp;base64,${Buffer.from("hello world").toString("base64")}`;
+    const result = parsePhotoDataUrl(url);
+    assert.equal(result.ok && result.bytes, 11);
+  });
+
+  await t.test("rejects a disallowed mime type", () => {
+    const result = parsePhotoDataUrl(dataUrlOfSize(64, "image/svg+xml"));
+    assert.deepEqual(result, { ok: false, error: "PHOTO_NOT_AN_IMAGE" });
+  });
+
+  await t.test("rejects a non-image mime type", () => {
+    const result = parsePhotoDataUrl(dataUrlOfSize(64, "text/html"));
+    assert.deepEqual(result, { ok: false, error: "PHOTO_NOT_AN_IMAGE" });
+  });
+
+  await t.test("rejects a payload over the cap", () => {
+    const result = parsePhotoDataUrl(dataUrlOfSize(PHOTO_MAX_BYTES + 1));
+    assert.deepEqual(result, { ok: false, error: "PHOTO_TOO_LARGE" });
+  });
+
+  await t.test("accepts a payload exactly at the cap", () => {
+    const result = parsePhotoDataUrl(dataUrlOfSize(PHOTO_MAX_BYTES));
+    assert.equal(result.ok, true);
+  });
+
+  await t.test("rejects a url with no data: prefix", () => {
+    assert.deepEqual(parsePhotoDataUrl("https://example.com/cat.png"), {
+      ok: false,
+      error: "PHOTO_MALFORMED",
+    });
+  });
+
+  await t.test("rejects a non-base64 data url", () => {
+    assert.deepEqual(parsePhotoDataUrl("data:image/webp,notbase64"), {
+      ok: false,
+      error: "PHOTO_MALFORMED",
+    });
+  });
+
+  await t.test("rejects empty input", () => {
+    assert.deepEqual(parsePhotoDataUrl(""), {
+      ok: false,
+      error: "PHOTO_MALFORMED",
+    });
+  });
+
+  await t.test("rejects a prefix with an empty payload", () => {
+    assert.deepEqual(parsePhotoDataUrl("data:image/webp;base64,"), {
+      ok: false,
+      error: "PHOTO_MALFORMED",
+    });
+  });
+
+  await t.test("rejects a payload containing invalid base64 characters", () => {
+    assert.deepEqual(parsePhotoDataUrl("data:image/webp;base64,!!!!"), {
+      ok: false,
+      error: "PHOTO_MALFORMED",
+    });
+  });
+});
+
+test("childPhotoMessage returns a message for every error code", () => {
+  const codes: ChildPhotoError[] = [
+    "PHOTO_NOT_AN_IMAGE",
+    "PHOTO_MALFORMED",
+    "PHOTO_TOO_LARGE",
+    "PHOTO_TOO_LARGE_TO_READ",
+  ];
+  for (const code of codes) {
+    const message = childPhotoMessage(code);
+    assert.equal(typeof message, "string");
+    assert.ok(message.length > 0, `${code} needs a message`);
+  }
+});

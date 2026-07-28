@@ -61,3 +61,58 @@ export function downscaleSteps(from: number, to: number = PHOTO_SIZE): number[] 
   if (steps.at(-1) !== to) steps.push(to);
   return steps;
 }
+
+// Why a photo was rejected. Codes rather than copy, so tests assert on rules
+// and wording stays free to change — same convention as child-input.ts.
+export type ChildPhotoError =
+  | "PHOTO_NOT_AN_IMAGE"
+  | "PHOTO_MALFORMED"
+  | "PHOTO_TOO_LARGE"
+  | "PHOTO_TOO_LARGE_TO_READ";
+
+export type PhotoParseResult =
+  | { ok: true; mime: string; bytes: number }
+  | { ok: false; error: ChildPhotoError };
+
+export function childPhotoMessage(error: ChildPhotoError): string {
+  switch (error) {
+    case "PHOTO_NOT_AN_IMAGE":
+      return "That file doesn't look like a photo we can use.";
+    case "PHOTO_MALFORMED":
+      return "We couldn't read that photo. Try picking it again.";
+    case "PHOTO_TOO_LARGE":
+      return "That photo is too large, even after shrinking it.";
+    case "PHOTO_TOO_LARGE_TO_READ":
+      return "That file is too big to open. Try a smaller photo.";
+  }
+}
+
+const DATA_URL_PREFIX = /^data:([a-z0-9.+/-]+);base64,([A-Za-z0-9+/]+={0,2})$/;
+
+// Validate a stored photo data URL and report its decoded size.
+//
+// The server runs this on whatever the browser submitted: client-side
+// compression is a UX convenience, never a trust boundary, so the size and
+// type checks have to hold here on their own.
+export function parsePhotoDataUrl(input: string): PhotoParseResult {
+  const match = DATA_URL_PREFIX.exec(input.trim());
+  if (!match) return { ok: false, error: "PHOTO_MALFORMED" };
+
+  const [, mime, base64] = match;
+  if (!(PHOTO_MIME_TYPES as readonly string[]).includes(mime)) {
+    return { ok: false, error: "PHOTO_NOT_AN_IMAGE" };
+  }
+
+  // Base64 encodes 3 bytes per 4 characters, so a valid payload's length is a
+  // multiple of 4.
+  if (base64.length % 4 !== 0) return { ok: false, error: "PHOTO_MALFORMED" };
+
+  // Derive the decoded length from the encoded length rather than allocating
+  // the buffer — this runs on every submit, and we may be about to reject it.
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  const bytes = (base64.length / 4) * 3 - padding;
+  if (bytes <= 0) return { ok: false, error: "PHOTO_MALFORMED" };
+  if (bytes > PHOTO_MAX_BYTES) return { ok: false, error: "PHOTO_TOO_LARGE" };
+
+  return { ok: true, mime, bytes };
+}
