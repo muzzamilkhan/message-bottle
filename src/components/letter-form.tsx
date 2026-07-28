@@ -6,8 +6,9 @@ import Image from "next/image";
 import { createLetter, type LetterFormState } from "@/app/actions";
 
 type Uploaded = { url: string; name: string };
+type ChildOption = { id: string; name: string; avatar: string };
 
-export function LetterForm() {
+export function LetterForm({ children }: { children: ChildOption[] }) {
   const [state, formAction] = useActionState<LetterFormState, FormData>(
     createLetter,
     {},
@@ -62,17 +63,32 @@ export function LetterForm() {
       </div>
 
       <div>
-        <label htmlFor="recipientName" className="field-label">
+        <label htmlFor="childId" className="field-label">
           Who is it for?
         </label>
-        <input
-          id="recipientName"
-          name="recipientName"
+        <select
+          id="childId"
+          name="childId"
           className="field-input"
-          placeholder="Ada"
-          maxLength={80}
+          defaultValue=""
           required
-        />
+        >
+          <option value="" disabled>
+            Choose a child…
+          </option>
+          {children.map((child) => (
+            <option key={child.id} value={child.id}>
+              {child.avatar} {child.name}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-sea-500">
+          Manage kids on the{" "}
+          <a href="/children" className="font-semibold text-blush-400 underline">
+            your kids
+          </a>{" "}
+          page.
+        </p>
       </div>
 
       <div>

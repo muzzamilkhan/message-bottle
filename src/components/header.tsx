@@ -12,6 +12,12 @@ export function Header({ userName }: { userName?: string | null }) {
           </span>
         </Link>
         <div className="flex items-center gap-3">
+          <Link
+            href="/children"
+            className="text-sm font-semibold text-sea-600 hover:text-sea-800"
+          >
+            👧 Kids
+          </Link>
           {userName ? (
             <span className="hidden text-sm text-sea-600 sm:inline">
               Hi, {userName.split(" ")[0]} 👋

@@ -12,7 +12,10 @@ export default async function Dashboard() {
   const letters = await prisma.letter.findMany({
     where: { authorId: session.user.id },
     orderBy: { deliverAt: "asc" },
-    include: { _count: { select: { photos: true } } },
+    include: {
+      _count: { select: { photos: true } },
+      child: { select: { avatar: true } },
+    },
   });
 
   return (
@@ -72,7 +75,7 @@ export default async function Dashboard() {
                       {letter.title}
                     </h2>
                     <p className="text-sm text-sea-600">
-                      For {letter.recipientName}
+                      {letter.child?.avatar ?? "💌"} For {letter.recipientName}
                     </p>
                     <p className="mt-3 text-xs text-sea-500">
                       Opens {formatDate(letter.deliverAt)}

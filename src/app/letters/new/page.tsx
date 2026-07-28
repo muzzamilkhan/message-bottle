@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { LetterForm } from "@/components/letter-form";
 
 export default async function NewLetter() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
+
+  const children = await prisma.child.findMany({
+    where: { parentId: session.user.id },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true, avatar: true },
+  });
 
   return (
     <>
@@ -25,7 +32,24 @@ export default async function NewLetter() {
           Say what's in your heart. It will wait, sealed, until the day you
           choose.
         </p>
-        <LetterForm />
+
+        {children.length === 0 ? (
+          <div className="card flex flex-col items-center py-12 text-center">
+            <div className="animate-float text-5xl">🧒</div>
+            <h2 className="mt-4 text-xl font-bold text-sea-800">
+              Add a child first
+            </h2>
+            <p className="mt-2 max-w-sm text-sea-600">
+              Letters are addressed to one of your kids. Create a profile, then
+              come back to write.
+            </p>
+            <Link href="/children" className="btn-primary mt-6">
+              ➕ Add a child
+            </Link>
+          </div>
+        ) : (
+          <LetterForm children={children} />
+        )}
       </main>
     </>
   );

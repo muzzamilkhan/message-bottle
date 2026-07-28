@@ -18,6 +18,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   letters       Letter[]
+  children      Child[]
   createdAt     DateTime  @default(now())
 }
 
@@ -58,11 +59,29 @@ model VerificationToken {
 
 // ----- App models -----
 
+model Child {
+  id        String   @id @default(cuid())
+  name      String
+  // A cute emoji avatar for the child.
+  avatar    String   @default("🧒")
+  birthday  DateTime?
+  parent    User     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  parentId  String
+  letters   Letter[]
+  createdAt DateTime @default(now())
+
+  @@index([parentId])
+}
+
 model Letter {
   id            String   @id @default(cuid())
   title         String
   body          String   @db.Text
+  // Snapshot of the child's name at write time, kept even if the child
+  // profile is later deleted.
   recipientName String
+  child         Child?   @relation(fields: [childId], references: [id], onDelete: SetNull)
+  childId       String?
   // The letter cannot be opened until this moment arrives.
   deliverAt     DateTime
   photos        Photo[]
@@ -72,6 +91,7 @@ model Letter {
   updatedAt     DateTime @updatedAt
 
   @@index([authorId])
+  @@index([childId])
 }
 
 model Photo {
