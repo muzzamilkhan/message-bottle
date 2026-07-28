@@ -1,6 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import {
+  cardStyle,
+  LEAVE_MS,
+  shouldAdvance,
+  swipeDirection,
+  VISIBLE_CARDS,
+} from "@/lib/letter-stack-style";
 
 // One letter, pre-formatted on the server so the client never touches Date
 // logic. By the time the stack renders, the child has reached their open age,
@@ -12,9 +19,6 @@ export type StackLetter = {
   authorName: string;
   writtenDate: string;
 };
-
-// How far (px) the top letter must be dragged before it flies away for good.
-const SWIPE_THRESHOLD = 110;
 
 export function LetterStack({ letters }: { letters: StackLetter[] }) {
   // Index of the letter currently on top of the stack. Oldest is first, so we
@@ -33,12 +37,12 @@ export function LetterStack({ letters }: { letters: StackLetter[] }) {
 
   function advance(direction: "left" | "right") {
     setLeaving(direction);
-    // Match the CSS transition duration below before swapping in the next card.
+    // Match the CSS transition duration before swapping in the next card.
     window.setTimeout(() => {
       setIndex((i) => i + 1);
       setLeaving(null);
       setDrag(0);
-    }, 380);
+    }, LEAVE_MS);
   }
 
   function onPointerDown(e: React.PointerEvent) {
@@ -56,8 +60,8 @@ export function LetterStack({ letters }: { letters: StackLetter[] }) {
   function onPointerUp() {
     if (!dragging || leaving) return;
     setDragging(false);
-    if (Math.abs(drag) > SWIPE_THRESHOLD) {
-      advance(drag < 0 ? "left" : "right");
+    if (shouldAdvance(drag)) {
+      advance(swipeDirection(drag));
     } else {
       // Not far enough — spring back to center.
       setDrag(0);
@@ -113,51 +117,18 @@ export function LetterStack({ letters }: { letters: StackLetter[] }) {
       >
         {letters
           .map((letter, i) => ({ letter, i }))
-          .filter(({ i }) => i >= index && i < index + 3)
+          .filter(({ i }) => i >= index && i < index + VISIBLE_CARDS)
           .reverse()
           .map(({ letter, i }) => {
             const depth = i - index; // 0 = top card, 1 = behind, 2 = further
             const isTop = depth === 0;
-
-            // Cards behind sit slightly lower and scaled down, fanning the pile.
-            let transform: string;
-            let transition: string;
-            let opacity = 1;
-
-            if (isTop) {
-              if (leaving) {
-                const dir = leaving === "left" ? -1 : 1;
-                transform = `translateX(${dir * 140}%) rotate(${
-                  dir * 18
-                }deg) rotateY(${dir * -60}deg)`;
-                transition =
-                  "transform 380ms cubic-bezier(0.4, 0, 0.2, 1), opacity 380ms ease";
-                opacity = 0;
-              } else {
-                const rot = drag / 22;
-                const flip = drag / 14; // subtle Y-axis flip while dragging
-                transform = `translateX(${drag}px) rotate(${rot}deg) rotateY(${flip}deg)`;
-                transition = dragging
-                  ? "none"
-                  : "transform 300ms cubic-bezier(0.4, 0, 0.2, 1)";
-              }
-            } else {
-              transform = `translateY(${depth * 14}px) scale(${
-                1 - depth * 0.05
-              })`;
-              transition = "transform 300ms ease";
-              opacity = 1 - depth * 0.08;
-            }
 
             return (
               <div
                 key={letter.id}
                 className="absolute inset-0"
                 style={{
-                  transform,
-                  transition,
-                  opacity,
-                  zIndex: 10 - depth,
+                  ...cardStyle(depth, { drag, dragging, leaving }),
                   transformStyle: "preserve-3d",
                   touchAction: "pan-y",
                   cursor: isTop ? (dragging ? "grabbing" : "grab") : "default",
