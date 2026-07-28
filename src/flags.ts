@@ -28,3 +28,27 @@ export async function openBottleBypass(): Promise<boolean> {
     return false;
   }
 }
+
+// Limited-time promotion: while this is on, the home page shows a banner
+// advertising lifetime Pro for new signups, and every newly created user is
+// granted the PRO tier by default (see events.createUser in src/auth.ts). Off
+// unless the deployment turns it on — an unset EDGE_CONFIG leaves it off.
+const lifetimeProSignupFlag = flag({
+  key: "lifetime-pro-signup",
+  adapter: vercelAdapter(),
+});
+
+// Fails closed, like openBottleBypass: any failure to *prove* the promotion is
+// on is treated as off, so a broken flag config never silently hands out Pro
+// memberships or shows an offer the deployment can't honor.
+export async function lifetimeProSignup(): Promise<boolean> {
+  try {
+    return Boolean(await lifetimeProSignupFlag());
+  } catch (error) {
+    console.warn(
+      "lifetime-pro-signup could not be evaluated; treating it as off",
+      error,
+    );
+    return false;
+  }
+}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { lifetimeProSignup } from "@/flags";
 import { SignInButton } from "@/components/auth-buttons";
 import { Bottle } from "@/components/bottle";
 
@@ -8,8 +9,17 @@ export default async function Home() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
 
+  const proPromo = await lifetimeProSignup();
+
   return (
     <main className="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center px-6">
+      {proPromo && (
+        <div className="mt-4 w-full rounded-2xl bg-gradient-to-r from-sea-600 to-sea-800 px-5 py-3 text-center text-sm font-semibold text-white shadow-md">
+          ✨ Limited-time offer — every new signup gets{" "}
+          <span className="font-extrabold">Pro, free for life</span>. Sign up now
+          and Pro is yours by default.
+        </div>
+      )}
       <div className="grid flex-1 items-center gap-10 py-16 md:grid-cols-2">
         <div className="text-center md:text-left">
           <p className="mb-3 inline-block rounded-full bg-white/70 px-4 py-1 text-sm font-semibold text-sea-600">
