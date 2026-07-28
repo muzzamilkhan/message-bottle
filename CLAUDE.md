@@ -129,8 +129,12 @@ These are the point of the app; changes must not weaken them.
   body to the browser until `hasReachedOpenAge` passes; the locked branch renders a
   countdown only. Keep it that way — never ship letter content and hide it client-side.
 
-The one exception: when the deployment sets `TESTING=true`, `?test=yes` on the open page
-bypasses the age gate. It is inert in any other environment.
+The one exception: when the `open-bottle-bypass` feature flag is enabled, `?test=yes` on the
+open page bypasses the age gate. Flags are declared in `src/flags.ts` using the Vercel
+adapter (`flags/next` + `@flags-sdk/vercel`), backed by Edge Config and overridable from the
+Vercel Toolbar. With the flag off — its default, and the case wherever `EDGE_CONFIG` is
+unset — the query param is inert. The flag is only evaluated when `?test=yes` is actually
+present, so normal opens cost no flag lookup.
 
 ### Dates
 

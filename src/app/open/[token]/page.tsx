@@ -3,6 +3,7 @@ import { Bottle } from "@/components/bottle";
 import { LetterStack, type StackLetter } from "@/components/letter-stack";
 import { countdown, formatDate } from "@/lib/letters";
 import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
+import { openBottleBypass } from "@/flags";
 
 // The child's self-authenticating open link. The unguessable token in the URL
 // is the credential — no sign-in needed. Bottles stay sealed until the child
@@ -44,9 +45,9 @@ export default async function OpenPage({
 
   // Testing escape hatch: `?test=yes` opens the bottle straight away, ignoring
   // the age-based bottle timer (and each letter's delivery date). It only works
-  // when the deployment explicitly opts in with TESTING=true — in normal
-  // environments the flag is inert and bottles stay sealed until their time.
-  const testOverride = process.env.TESTING === "true" && test === "yes";
+  // when the deployment explicitly opts in by enabling the `open-bottle-bypass`
+  // feature flag — with the flag off, bottles stay sealed until their time.
+  const testOverride = test === "yes" && (await openBottleBypass());
 
   const child = await prisma.child.findUnique({
     where: { openToken: token },
