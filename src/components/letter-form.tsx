@@ -4,11 +4,10 @@ import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveLetter, type LetterFormState } from "@/app/actions";
 import { ChildAvatar } from "@/components/child-avatar";
-import {
-  LetterImageInput,
-  type DraftImage,
-} from "@/components/letter-image-input";
+import { LetterBlocksEditor } from "@/components/letter-blocks-editor";
+import type { DraftImage } from "@/components/use-letter-image-upload";
 import type { LetterChildOption } from "@/lib/children";
+import { toBlocks, toBody, type LetterBlock } from "@/lib/letter-blocks";
 
 type ExistingLetter = {
   id: string;
@@ -46,19 +45,13 @@ export function LetterForm({
   // When true, the "seal forever" confirmation panel is shown instead of the
   // normal buttons.
   const [confirming, setConfirming] = useState(false);
-  const [body, setBody] = useState(letter?.body ?? "");
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
-
-  // Drop a marker on its own line at the cursor, so the photo lands where the
-  // parent was writing rather than at the end.
-  function insertMarker(marker: string) {
-    const textarea = bodyRef.current;
-    const at = textarea?.selectionStart ?? body.length;
-    const before = body.slice(0, at).replace(/\n*$/, "");
-    const after = body.slice(at).replace(/^\n*/, "");
-    const next = [before, marker, after].filter(Boolean).join("\n\n");
-    setBody(next);
-  }
+  // The body as blocks. Serialised back to the stored string on submit, so the
+  // server sees exactly what the old textarea sent.
+  const [blocks, setBlocks] = useState<LetterBlock[]>(() => {
+    const loaded = toBlocks(letter?.body ?? "");
+    // Always something to type into.
+    return loaded.length > 0 ? loaded : [{ kind: "text", text: "" }];
+  });
 
   function submitWith(intent: "draft" | "submit") {
     if (intentRef.current) intentRef.current.value = intent;
@@ -128,24 +121,15 @@ export function LetterForm({
       )}
 
       <div>
-        <label htmlFor="body" className="field-label">
-          Your message
-        </label>
-        <textarea
-          id="body"
-          name="body"
-          ref={bodyRef}
-          className="field-input min-h-48 resize-y"
-          placeholder="Dear Ada, I'm writing this while you're still small enough to fall asleep on my shoulder…"
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-        />
-        <LetterImageInput
+        <span className="field-label">Your message</span>
+        {/* The body travels as the same plain string it always has. */}
+        <input type="hidden" name="body" value={toBody(blocks)} />
+        <LetterBlocksEditor
+          blocks={blocks}
+          onChange={setBlocks}
           letterId={letter?.id}
           canUpload={canUploadImages}
-          body={body}
           existingImages={existingImages}
-          onInsert={insertMarker}
         />
       </div>
 
