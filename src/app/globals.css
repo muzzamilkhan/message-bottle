@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Baloo 2", system-ui;
+  --font-body: "Nunito", system-ui;
+}
+
+@layer base {
+  body {
+    @apply font-body text-sea-900;
+    background: linear-gradient(180deg, #eef8fb 0%, #d5eef4 55%, #f4e0b6 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold shadow-sm transition active:scale-95;
+  }
+  .btn-primary {
+    @apply btn bg-blush-500 text-white hover:bg-blush-400;
+  }
+  .btn-secondary {
+    @apply btn bg-white/80 text-sea-700 hover:bg-white;
+  }
+  .card {
+    @apply rounded-3xl bg-white/80 p-6 shadow-lg ring-1 ring-sea-100 backdrop-blur;
+  }
+  .field-label {
+    @apply mb-1 block text-sm font-semibold text-sea-700;
+  }
+  .field-input {
+    @apply w-full rounded-2xl border-none bg-sea-50 px-4 py-3 text-sea-900 ring-1 ring-sea-100 outline-none placeholder:text-sea-300 focus:ring-2 focus:ring-blush-300;
+  }
+}
+
+/* gentle animated waves at the bottom of the page */
+.waves {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.25),
+    rgba(255, 255, 255, 0.25) 12px,
+    transparent 12px,
+    transparent 24px
+  );
+}
