@@ -44,7 +44,7 @@ export function ChildAvatar({
   }
 
   return (
-    <span className={`${text} leading-none`} aria-hidden="true">
+    <span className={text} aria-hidden="true">
       {child.avatar}
     </span>
   );
