@@ -179,66 +179,57 @@ export function LetterBlocksEditor({
 
   return (
     <div>
-      {/* The outer box owns the border and clips its rounded corners; the inner
-          div is the scroll container, so the toolbar's `sticky top-0` pins it to
-          the input rather than the page. overflow-x-hidden lets the toolbar's
-          negative margins reach the edges without a horizontal scrollbar. */}
-      <div className="field-input overflow-hidden !p-0">
-        <div className="max-h-[60vh] min-h-48 space-y-1 overflow-y-auto overflow-x-hidden px-4 py-3 text-sea-900">
-          <LetterFormatToolbar
-            boldActive={marks.bold}
-            italicActive={marks.italic}
-            onBold={() => format("bold")}
-            onItalic={() => format("italic")}
-          />
-          {keyed.map(({ key, block }, index) => {
-            if (block.kind === "photo") {
-              const image = known.get(block.id);
-              // An id with no known dimensions still renders — the image loads,
-              // the box just isn't reserved.
-              return (
-                <LetterPhotoBlock
-                  key={key}
-                  image={image ?? { id: block.id, width: 1280, height: 960 }}
-                  canMoveUp={index > 0}
-                  canMoveDown={index < blocks.length - 1}
-                  onMoveUp={() => move(index, -1)}
-                  onMoveDown={() => move(index, 1)}
-                  onRemove={() => removeAt(index)}
-                />
-              );
-            }
+      <div className="field-input min-h-48 space-y-1">
+        <LetterFormatToolbar
+          boldActive={marks.bold}
+          italicActive={marks.italic}
+          onBold={() => format("bold")}
+          onItalic={() => format("italic")}
+        />
+        {keyed.map(({ key, block }, index) => {
+          if (block.kind === "photo") {
+            const image = known.get(block.id);
+            // An id with no known dimensions still renders — the image loads,
+            // the box just isn't reserved.
             return (
-              <div key={key} data-letter-text-block>
-                <LetterTextBlock
-                  text={block.text}
-                  placeholder={
-                    index === 0
-                      ? "Dear Ada, I'm writing this while you're still small enough to fall asleep on my shoulder…"
-                      : undefined
-                  }
-                  onChange={(text) => setBlock(index, text)}
-                  onFocus={() => {
-                    insertAt.current = index + 1;
-                  }}
-                  onBlur={() => {
-                    // An emptied block that isn't the only one goes away, so the
-                    // letter doesn't accumulate blank gaps.
-                    if (blocks.length > 1 && blocks[index]?.kind === "text") {
-                      const current = blocks[index];
-                      if (
-                        current.kind === "text" &&
-                        current.text.trim() === ""
-                      ) {
-                        removeAt(index);
-                      }
-                    }
-                  }}
-                />
-              </div>
+              <LetterPhotoBlock
+                key={key}
+                image={image ?? { id: block.id, width: 1280, height: 960 }}
+                canMoveUp={index > 0}
+                canMoveDown={index < blocks.length - 1}
+                onMoveUp={() => move(index, -1)}
+                onMoveDown={() => move(index, 1)}
+                onRemove={() => removeAt(index)}
+              />
             );
-          })}
-        </div>
+          }
+          return (
+            <div key={key} data-letter-text-block>
+              <LetterTextBlock
+                text={block.text}
+                placeholder={
+                  index === 0
+                    ? "Dear Ada, I'm writing this while you're still small enough to fall asleep on my shoulder…"
+                    : undefined
+                }
+                onChange={(text) => setBlock(index, text)}
+                onFocus={() => {
+                  insertAt.current = index + 1;
+                }}
+                onBlur={() => {
+                  // An emptied block that isn't the only one goes away, so the
+                  // letter doesn't accumulate blank gaps.
+                  if (blocks.length > 1 && blocks[index]?.kind === "text") {
+                    const current = blocks[index];
+                    if (current.kind === "text" && current.text.trim() === "") {
+                      removeAt(index);
+                    }
+                  }
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
 
       <input
