@@ -240,12 +240,11 @@ describe("parseChildInput", () => {
       assert.equal(result.ok && result.value.photo, null);
     });
 
-    it("echoes whether a photo was submitted, not the photo", () => {
+    it("never echoes the photo itself in the echoed values", () => {
       const result = parseChildInput(
         { ...base, name: "", photo, photoAction: "set" },
         new Date("2024-01-01T12:00:00Z"),
       );
-      assert.equal(!result.ok && result.values.hasPhoto, true);
       // The data URL must not ride along in the echoed values.
       assert.equal(
         Object.values(!result.ok ? result.values : {}).includes(photo),
@@ -292,7 +291,6 @@ describe("parseChildInput", () => {
         avatar: "🦊",
         birthday: "2018-03-04",
         openAtAge: "3",
-        hasPhoto: false,
       });
     });
 

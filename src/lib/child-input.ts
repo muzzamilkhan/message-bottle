@@ -24,10 +24,6 @@ export type ChildFormValues = {
   avatar: string;
   birthday: string;
   openAtAge: string;
-  // Whether a photo was submitted — not the photo itself. The ~9 KB data URL
-  // stays in the browser's React state across an error re-render rather than
-  // making a round trip in the echoed values.
-  hasPhoto: boolean;
 };
 
 export type ParsedChild = {
@@ -119,13 +115,14 @@ export function parseChildInput(
       ? raw.photoAction
       : "keep";
 
-  // What the user just entered, so an error re-render can restore it.
+  // What the user just entered, so an error re-render can restore it. The
+  // photo itself never rides along here — it stays in the browser's React
+  // state across an error re-render, which is why there's no photo field.
   const values: ChildFormValues = {
     name,
     avatar,
     birthday: birthdayRaw,
     openAtAge: openAtAgeRaw,
-    hasPhoto: action === "set" && photoRaw.length > 0,
   };
   const fail = (
     error: ChildInputError,
