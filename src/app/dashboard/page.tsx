@@ -3,10 +3,15 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
+import { LetterForm } from "@/components/letter-form";
 import { formatDate } from "@/lib/letters";
 import { getAccessibleChildren } from "@/lib/children";
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ childId?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
@@ -21,6 +26,37 @@ export default async function Dashboard() {
     }),
     getAccessibleChildren(session.user.id),
   ]);
+
+  // Tapping a child's avatar sets ?childId=… on the home page itself — we stay
+  // put and drop straight into the letter form, already addressed to them.
+  const { childId } = await searchParams;
+  const composingChild = childId
+    ? children.find((c) => c.id === childId)
+    : undefined;
+
+  if (composingChild) {
+    return (
+      <>
+        <Header userName={session.user.name} />
+        <main className="mx-auto max-w-2xl px-6 py-10">
+          <Link
+            href="/dashboard"
+            className="text-sm font-semibold text-sea-600 hover:text-sea-800"
+          >
+            ← Back to your bottles
+          </Link>
+          <h1 className="mb-1 mt-3 text-3xl font-extrabold text-sea-800">
+            Write a letter to {composingChild.name}
+          </h1>
+          <p className="mb-6 text-sea-600">
+            Say what&apos;s in your heart. It will wait, sealed, until{" "}
+            {composingChild.name} is old enough to open it.
+          </p>
+          <LetterForm children={children} lockedChild={composingChild} />
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -57,7 +93,7 @@ export default async function Dashboard() {
               {children.map((child) => (
                 <li key={child.id}>
                   <Link
-                    href={`/letters/new?childId=${child.id}`}
+                    href={`/dashboard?childId=${child.id}`}
                     className="flex w-24 flex-col items-center gap-2 rounded-2xl bg-sea-50 px-3 py-4 text-center ring-1 ring-sea-100 transition hover:-translate-y-1 hover:bg-white hover:shadow-md"
                   >
                     <span className="text-4xl">{child.avatar}</span>
