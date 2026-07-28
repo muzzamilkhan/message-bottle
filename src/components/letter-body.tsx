@@ -1,4 +1,5 @@
 import { parseLetterBody, type Span } from "@/lib/letter-body";
+import { letterImageUrl } from "@/lib/letter-image-url";
 
 // An image the letter is allowed to show, with its stored size.
 export type LetterImageRef = {
@@ -17,12 +18,18 @@ export function LetterBody({
   body,
   images = [],
   openToken,
+  bypass = false,
 }: {
   body: string;
   images?: LetterImageRef[];
   // Present only on the child's open page, where there is no session and the
   // token is the credential.
   openToken?: string;
+  // Whether the server granted the `open-bottle-bypass` escape hatch for this
+  // render. Photos must travel through the same gate as the text around them:
+  // a bypassed page whose images 404 is the broken half-state the exception
+  // exists to avoid.
+  bypass?: boolean;
 }) {
   const nodes = parseLetterBody(body);
   const byId = new Map(images.map((image) => [image.id, image]));
@@ -36,7 +43,12 @@ export function LetterBody({
           // deleted from under it — is skipped rather than breaking the page.
           if (!image) return null;
           return (
-            <LetterImage key={`${node.id}-${index}`} image={image} openToken={openToken} />
+            <LetterImage
+              key={`${node.id}-${index}`}
+              image={image}
+              openToken={openToken}
+              bypass={bypass}
+            />
           );
         }
         return (
@@ -61,16 +73,16 @@ function SpanText({ span }: { span: Span }) {
 function LetterImage({
   image,
   openToken,
+  bypass,
 }: {
   image: LetterImageRef;
   openToken?: string;
+  bypass?: boolean;
 }) {
   // Every image byte comes through the authorized route; there is no other URL
-  // that serves one. The token rides in the query string because an <img>
-  // can't send a header.
-  const src = openToken
-    ? `/api/letter-image/${image.id}?t=${encodeURIComponent(openToken)}`
-    : `/api/letter-image/${image.id}`;
+  // that serves one. The query string is built by the shared helper so this
+  // never drifts from what the route reads back.
+  const src = letterImageUrl(image.id, { openToken, bypass });
 
   return (
     // Plain <img>, not next/image: the route is authorized per-request and
