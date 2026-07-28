@@ -26,16 +26,3 @@ export function hasReachedOpenAge(
 ): boolean {
   return at.getTime() >= birthdayAtAge(birthday, openAtAge).getTime();
 }
-
-// The day a letter actually becomes openable for the child: the later of the
-// letter's own delivery date and the day the child reaches their open age.
-// A letter dated before the child is old enough still waits for the age gate.
-export function effectiveOpenDate(
-  deliverAt: Date,
-  birthday: Date | null,
-  openAtAge: number | null,
-): Date {
-  if (!birthday || openAtAge == null) return deliverAt;
-  const ageDate = birthdayAtAge(birthday, openAtAge);
-  return ageDate.getTime() > deliverAt.getTime() ? ageDate : deliverAt;
-}

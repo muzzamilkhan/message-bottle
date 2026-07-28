@@ -29,13 +29,13 @@ export async function saveLetter(
   const title = String(formData.get("title") ?? "").trim();
   const childId = String(formData.get("childId") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
-  const deliverAtRaw = String(formData.get("deliverAt") ?? "").trim();
 
   // A draft needs at least a title to have something to come back to; sending
-  // requires every field so the sealed letter is complete.
+  // requires the recipient and message so the sealed letter is complete. When
+  // the bottle opens is set on the child, not the letter.
   if (submitting) {
-    if (!title || !childId || !body || !deliverAtRaw) {
-      return { error: "Please fill in the title, child, message, and date." };
+    if (!title || !childId || !body) {
+      return { error: "Please fill in the title, child, and message." };
     }
   } else if (!title) {
     return { error: "Give your draft a title so you can find it later." };
@@ -60,23 +60,11 @@ export async function saveLetter(
     }
   }
 
-  let deliverAt: Date | null = null;
-  if (deliverAtRaw) {
-    deliverAt = new Date(deliverAtRaw);
-    if (Number.isNaN(deliverAt.getTime())) {
-      return { error: "That delivery date doesn't look right." };
-    }
-    if (deliverAt.getTime() <= Date.now()) {
-      return { error: "Pick a delivery date in the future — that's the magic!" };
-    }
-  }
-
   const data = {
     title,
     recipientName: child?.name ?? "",
     childId: child?.id ?? null,
     body,
-    deliverAt,
     status: submitting ? "SENT" : "DRAFT",
   };
 

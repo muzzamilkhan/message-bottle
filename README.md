@@ -1,21 +1,23 @@
 # 🍾 Message in a Bottle
 
 Write letters to your kids that stay **sealed until a special day**. Parents
-sign in with Google, write a letter, tuck in some photos, and choose a delivery
-date. The bottle can't be opened until that day arrives.
+sign in with Google and write a letter to a child. The bottle can't be opened
+until the child reaches the age set on their profile.
 
 Built with **Next.js (App Router)**, **Postgres + Prisma**, **Auth.js** (Google
-login), **Vercel Blob** for photos, and **Tailwind CSS** for the cute seaside
-theme. Deploys cleanly to **Vercel**.
+login), and **Tailwind CSS** for the cute seaside theme. Deploys cleanly to
+**Vercel**.
 
 ## Features
 
 - 🔐 Google sign-in (Auth.js v5 with the Prisma adapter)
 - ✍️ Write letters addressed to a child, with a title and message
-- 📸 Attach photos (stored in Vercel Blob)
-- 🗓️ Time-lock: a letter stays sealed until its delivery date, then unlocks
-- 🌊 Dashboard of your bottles with a live countdown to each opening
-- 🗑️ Delete letters you own (ownership enforced on every read/write)
+- 💾 Save a letter as a **draft** and come back to edit it later
+- 🍾 Sealing is final: once sent, a letter can never be viewed, edited, or
+  deleted by the author
+- 🗓️ Time-lock: a letter opens when the recipient child reaches their bottle-timer
+  age — the open date is set on the child, not per letter
+- 🌊 Dashboard showing your count of sent messages and a list of editable drafts
 - 👶 Add and **edit** each child's details (name, avatar, full birthday)
 - 🍾 Every child has a required **bottle timer** — the age (older than they are
   now) at which they can open their bottles from a private, self-authenticating
@@ -47,9 +49,6 @@ cp .env.example .env
   [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
   Add the redirect URI `http://localhost:3000/api/auth/callback/google` for
   local dev (and your production URL when you deploy).
-- **`BLOB_READ_WRITE_TOKEN`** — from Vercel Blob storage. Photo uploads are
-  disabled gracefully if this is missing; everything else still works.
-
 ### 3. Set up the database
 
 ```bash
@@ -67,8 +66,8 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Deploying to Vercel
 
 1. Push this repo to GitHub and import it into Vercel.
-2. Add a **Postgres** database and **Blob** store from the Vercel dashboard —
-   this populates `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN` automatically.
+2. Add a **Postgres** database from the Vercel dashboard — this populates
+   `DATABASE_URL` automatically.
 3. Add `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and `AUTH_GOOGLE_SECRET` as
    environment variables.
 4. In Google Cloud, add `https://YOUR_DOMAIN/api/auth/callback/google` to the
@@ -79,22 +78,21 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Project structure
 
 ```
-prisma/schema.prisma        Database models (User, Child, Letter, Photo, sharing)
+prisma/schema.prisma        Database models (User, Child, Letter, sharing)
 src/auth.ts                 Auth.js configuration (Google + Prisma adapter)
 src/lib/prisma.ts           Prisma client singleton
-src/lib/letters.ts          Time-lock + date/countdown helpers
+src/lib/letters.ts          Date + countdown helpers
 src/lib/children.ts         Accessible-children helpers (owned + shared)
 src/app/actions.ts          Server actions: letters, children, and sharing
-src/app/api/upload/route.ts Photo upload endpoint (Vercel Blob)
 src/app/page.tsx            Landing page
-src/app/dashboard/          List of the signed-in user's bottles
+src/app/dashboard/          Sent-message count + editable drafts
 src/app/children/           Manage/edit your kids + set their bottle timer
 src/app/open/[token]/       A child's self-authenticating open page (age-gated)
-src/lib/age.ts              Age + open-date helpers for the bottle timer
+src/lib/age.ts              Age helpers for the bottle timer
 src/app/share/              Invite a co-parent and manage shared access
 src/app/invite/[token]/     Accept a share invite (signs in if needed)
 src/app/letters/new/        Write-a-letter form
-src/app/letters/[id]/       View a letter (locked until its delivery date)
+src/app/letters/[id]/       Edit a draft letter (sent letters are sealed)
 src/components/             UI: header, auth buttons, bottle illustration, forms
 ```
 
@@ -116,9 +114,15 @@ access at any time from the Share page.
 
 ## A note on the time-lock
 
-The lock is enforced on the server: `src/app/letters/[id]/page.tsx` only renders
-the letter body and photos once `deliverAt` has passed. Before then, no letter
-content is sent to the browser — just the sealed-bottle placeholder.
+When a letter opens is governed entirely by the recipient child's **bottle
+timer** (see below), not by any per-letter date. A parent writes a letter, seals
+it, and it stays with the child's collection until the child reaches the age set
+on their profile. The lock is enforced on the server: `src/app/open/[token]/page.tsx`
+sends no letter content to the browser until the age gate has passed.
+
+Sealing is final. Once a letter is sent (`status: "SENT"`) the author can never
+view, edit, or delete it; only editable drafts (`status: "DRAFT"`) have a page of
+their own.
 
 ## The bottle timer (a child's self-opening link)
 
@@ -130,6 +134,6 @@ child mints a random, unguessable `openToken` and produces a private link
 The link is self-authenticating (the token is the credential) but still fully
 time-locked on the server: `src/app/open/[token]/page.tsx` computes the child's
 age from their birthday and shows only the sealed collection until they reach the
-chosen age. Once they do, each letter still respects its own `deliverAt`, so a
-letter dated further out stays sealed. The required age is validated on the
-server against the child's current age, so a timer can never be set in the past.
+chosen age. Once they do, every letter written for them opens at once. The
+required age is validated on the server against the child's current age, so a
+timer can never be set in the past.

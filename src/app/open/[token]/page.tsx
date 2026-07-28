@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Bottle } from "@/components/bottle";
 import { LetterStack, type StackLetter } from "@/components/letter-stack";
-import { countdown, formatDate, isUnlocked } from "@/lib/letters";
+import { countdown, formatDate } from "@/lib/letters";
 import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
 
 // The child's self-authenticating open link. The unguessable token in the URL
@@ -125,17 +125,6 @@ export default async function OpenPage({
               body: letter.body,
               authorName: letter.author?.name?.trim() || "A parent",
               writtenDate: formatDate(letter.createdAt),
-              // SENT letters always carry a delivery date; fall back defensively.
-              deliverDate: letter.deliverAt
-                ? formatDate(letter.deliverAt)
-                : formatDate(letter.createdAt),
-              countdown: letter.deliverAt
-                ? countdown(letter.deliverAt)
-                : "Ready to open!",
-              unlocked:
-                testOverride ||
-                !letter.deliverAt ||
-                isUnlocked(letter.deliverAt),
             }),
           )}
         />

@@ -16,7 +16,6 @@ type ExistingLetter = {
   title: string;
   childId: string | null;
   body: string;
-  deliverAt: string | null; // yyyy-mm-dd
 };
 
 export function LetterForm({
@@ -37,12 +36,6 @@ export function LetterForm({
   // When true, the "seal forever" confirmation panel is shown instead of the
   // normal buttons.
   const [confirming, setConfirming] = useState(false);
-
-  // Default the date picker to one year from today for new letters.
-  const nextYear = new Date();
-  nextYear.setFullYear(nextYear.getFullYear() + 1);
-  const defaultDate = letter?.deliverAt ?? nextYear.toISOString().slice(0, 10);
-  const minDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
   function submitWith(intent: "draft" | "submit") {
     if (intentRef.current) intentRef.current.value = intent;
@@ -109,22 +102,10 @@ export function LetterForm({
         />
       </div>
 
-      <div>
-        <label htmlFor="deliverAt" className="field-label">
-          Open on
-        </label>
-        <input
-          id="deliverAt"
-          name="deliverAt"
-          type="date"
-          className="field-input"
-          defaultValue={defaultDate}
-          min={minDate}
-        />
-        <p className="mt-1 text-xs text-sea-500">
-          The bottle stays sealed until this day.
-        </p>
-      </div>
+      <p className="rounded-2xl bg-sea-100 px-4 py-3 text-sm text-sea-600">
+        🗓️ This bottle opens when your child reaches the age you set on their
+        profile — no per-letter date needed.
+      </p>
 
       {state.error && (
         <p className="rounded-2xl bg-blush-200 px-4 py-3 text-sm font-semibold text-blush-500">
