@@ -81,25 +81,25 @@ export function serializeRichText(nodes: RichNode[]): string {
   let bold = false;
   let italic = false;
 
+  // Emit a marker whenever a format's OWN flag flips, independently of the
+  // other format. This mirrors parseSpans in letter-body.ts exactly: ** and
+  // * are two independent toggles there, not a stack of nested tags, so **
+  // and * never need to interact here either. The previous version modeled
+  // this as nested HTML-like tags (bold always closing outside italic) and
+  // had to close-and-reopen the other format whenever one of them ended —
+  // which is not only unnecessary but actively wrong: it can print two
+  // markers of the same kind back to back (e.g. "****"), and parseSpans
+  // reads a repeated marker with nothing between as an EMPTY, non-toggling
+  // pair, desynchronising every span after it. Toggling flags independently
+  // never produces that: each marker here always corresponds to a real flip.
   function setFormat(nextBold: boolean, nextItalic: boolean) {
-    // Close in the reverse order of opening, so markers nest rather than
-    // interleave: "**very *small***", never "**very *small***".
-    if (italic && !nextItalic) {
-      out += "*";
-      italic = false;
-    }
     if (bold !== nextBold) {
-      if (bold && italic) {
-        // Bold closes outside italic, so italic must close first and reopen.
-        out += "*";
-        italic = false;
-      }
       out += "**";
       bold = nextBold;
     }
-    if (!italic && nextItalic) {
+    if (italic !== nextItalic) {
       out += "*";
-      italic = true;
+      italic = nextItalic;
     }
   }
 

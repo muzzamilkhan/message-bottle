@@ -24,16 +24,22 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-// Turn the stored **/* form into <b>/<i> for editing. Mirrors parseSpans in
-// letter-body.ts, including its rule that an unmatched marker is literal text.
-function toEditableHtml(text: string): string {
-  let html = "";
+// A run of text sharing one set of formatting flags. Mirrors the Run type in
+// letter-rich-text.ts, which assembles the same shape in the other direction.
+type Run = { text: string; bold: boolean; italic: boolean };
+
+// Split the stored **/* form into spans. This is exactly parseSpans in
+// letter-body.ts — same marker-scanning loop, same rule that an unmatched or
+// empty marker pair is literal text — just building a list of spans instead
+// of appending tags inline, so the tags can be nested correctly afterward.
+function toSpans(text: string): Run[] {
+  const spans: Run[] = [];
   let bold = false;
   let italic = false;
   let buffer = "";
 
   const flush = () => {
-    html += escapeHtml(buffer);
+    if (buffer) spans.push({ text: buffer, bold, italic });
     buffer = "";
   };
 
@@ -51,13 +57,8 @@ function toEditableHtml(text: string): string {
 
       if (closes && !empty) {
         flush();
-        if (isBold) {
-          html += bold ? "</b>" : "<b>";
-          bold = !bold;
-        } else {
-          html += italic ? "</i>" : "<i>";
-          italic = !italic;
-        }
+        if (isBold) bold = !bold;
+        else italic = !italic;
         i += marker.length;
         continue;
       }
@@ -68,8 +69,50 @@ function toEditableHtml(text: string): string {
   }
 
   flush();
-  if (italic) html += "</i>";
-  if (bold) html += "</b>";
+  return spans;
+}
+
+// Turn the stored **/* form into <b>/<i> for editing. First splits the text
+// into spans (toSpans, above — a byte-for-byte mirror of parseSpans), then
+// emits markup from the spans rather than from the marker scan directly, so
+// tags always nest properly. A naive inline emitter can produce a crossing
+// pair like <b>a<i>b</b></i> for input like "**a*b**" — the browser silently
+// re-nests that into <b>a<i>b</i></b>, which changes which characters are
+// italic on the next read. Closing and reopening at crossing points (the same
+// trick serializeRichText's setFormat uses in the other direction) avoids
+// that: bold always nests outside italic here, so italic closes and reopens
+// around any bold boundary instead of crossing it.
+function toEditableHtml(text: string): string {
+  const spans = toSpans(text);
+
+  let html = "";
+  let bold = false;
+  let italic = false;
+
+  function setFormat(nextBold: boolean, nextItalic: boolean) {
+    if (italic && !nextItalic) {
+      html += "</i>";
+      italic = false;
+    }
+    if (bold !== nextBold) {
+      if (bold && italic) {
+        html += "</i>";
+        italic = false;
+      }
+      html += bold ? "</b>" : "<b>";
+      bold = nextBold;
+    }
+    if (!italic && nextItalic) {
+      html += "<i>";
+      italic = true;
+    }
+  }
+
+  for (const span of spans) {
+    setFormat(span.bold, span.italic);
+    html += escapeHtml(span.text);
+  }
+  setFormat(false, false);
 
   return html.replace(/\n/g, "<br>");
 }
@@ -98,7 +141,6 @@ export function LetterTextBlock({
     const element = ref.current;
     if (element) element.innerHTML = toEditableHtml(initial.current);
     // Deliberately empty: this must run on mount and never again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function emit() {

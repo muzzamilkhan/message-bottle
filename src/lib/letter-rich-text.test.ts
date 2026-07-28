@@ -49,6 +49,34 @@ describe("serializeRichText", () => {
     );
   });
 
+  it("keeps italic open across a bold run that closes inside it", () => {
+    // <i>a<b>b</b></i><i>c</i>: italic never actually stops, only bold
+    // toggles on then off within it. Toggling each format independently of
+    // the other must leave italic's markers untouched by bold's — closing
+    // italic here (as the old bold-is-always-outer version did whenever
+    // bold changed) would print "****" between b and c, which the parser
+    // reads as an empty, non-toggling marker pair and loses the formatting
+    // on everything after it.
+    assert.equal(
+      serializeRichText([
+        el("i", t("a"), el("b", t("b"))),
+        el("i", t("c")),
+      ]),
+      "*a**b**c*",
+    );
+  });
+
+  it("keeps bold open across an italic run that closes inside it", () => {
+    // The mirror of the case above: <b>a<i>b</i></b><b>c</b>.
+    assert.equal(
+      serializeRichText([
+        el("b", t("a"), el("i", t("b"))),
+        el("b", t("c")),
+      ]),
+      "**a*b*c**",
+    );
+  });
+
   it("does not emit markers around empty formatting", () => {
     assert.equal(serializeRichText([el("b")]), "");
   });
@@ -138,6 +166,24 @@ describe("agreement with the letter parser", () => {
     if (nodes[0].kind !== "paragraph") throw new Error("expected a paragraph");
     assert.deepEqual(nodes[0].spans, [
       { text: "alert(1)", bold: false, italic: false },
+    ]);
+  });
+
+  it("round-trips italic continuing across a closed bold run", () => {
+    // The original tree from the bug report: italic spans both the plain
+    // run and the bold run inside it, then continues into a second
+    // separate <i> after the bold closes.
+    const tree = [
+      el("i", t("a"), el("b", t("b"))),
+      el("i", t("c")),
+    ];
+    const body = serializeRichText(tree);
+    const nodes = parseLetterBody(body);
+    if (nodes[0].kind !== "paragraph") throw new Error("expected a paragraph");
+    assert.deepEqual(nodes[0].spans, [
+      { text: "a", bold: false, italic: true },
+      { text: "b", bold: true, italic: true },
+      { text: "c", bold: false, italic: true },
     ]);
   });
 });
