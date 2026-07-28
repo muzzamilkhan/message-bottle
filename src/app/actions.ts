@@ -223,11 +223,19 @@ export async function deleteChild(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  // Only delete a child the current user owns. Letters keep their name
-  // snapshot; their childId is set to null by the schema relation.
-  await prisma.child.deleteMany({
+  // Only the owner may remove a child. Removing a child is destructive: every
+  // letter written to them — drafts and sealed alike, from any co-parent — is
+  // deleted forever, and the private open link stops working.
+  const child = await prisma.child.findFirst({
     where: { id, parentId: session.user.id },
+    select: { id: true },
   });
+  if (!child) return;
+
+  await prisma.$transaction([
+    prisma.letter.deleteMany({ where: { childId: child.id } }),
+    prisma.child.delete({ where: { id: child.id } }),
+  ]);
 
   revalidatePath("/children");
   revalidatePath("/dashboard");
