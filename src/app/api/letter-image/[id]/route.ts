@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { canAccessChild } from "@/lib/children";
 import { hasReachedOpenAge } from "@/lib/age";
 import { getLetterImage } from "@/lib/letter-image-store";
+import { openBottleBypass } from "@/flags";
 
 // The only way to an inline letter image. Private blob storage makes the bytes
 // unreachable by URL, so every request for a photo of a child arrives here and
@@ -87,7 +88,7 @@ async function isAuthorized(
   }
 
   // 3. The child, holding their own open link.
-  return childMayRead(request, image);
+  return await childMayRead(request, image);
 }
 
 // The time lock, re-derived here from the child row.
@@ -97,7 +98,10 @@ async function isAuthorized(
 // render bodies while locked, but this route is directly addressable — so it
 // has to check for itself, and it never trusts a client-supplied claim about
 // age or unlock state.
-function childMayRead(request: Request, image: ImageRecord): boolean {
+async function childMayRead(
+  request: Request,
+  image: ImageRecord,
+): Promise<boolean> {
   const child = image.letter?.child;
   if (!child?.openToken) return false;
 
@@ -111,10 +115,14 @@ function childMayRead(request: Request, image: ImageRecord): boolean {
   // Only sealed letters ever reach a child.
   if (image.letter?.status !== "SENT") return false;
 
-  // The documented testing bypass, inert unless the deployment sets it.
-  const testing =
-    process.env.TESTING === "true" && url.searchParams.get("test") === "yes";
-  if (testing) return true;
+  // The same testing escape hatch the open page uses, and it has to stay in
+  // step with it: a bypassed page that renders letters whose photos 404 is
+  // exactly the broken half-state the exception exists to avoid. Like the
+  // page, the flag is only consulted when `?test=yes` is actually present, so
+  // an ordinary open costs no flag lookup.
+  if (url.searchParams.get("test") === "yes" && (await openBottleBypass())) {
+    return true;
+  }
 
   return hasReachedOpenAge(child.birthday, child.openAtAge);
 }
