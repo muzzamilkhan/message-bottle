@@ -11,8 +11,8 @@
 // Think hard before doing it.
 
 // A minimal structural view of a DOM node. Real DOM nodes are mapped onto this
-// by fromDom() below, which keeps the serialiser testable in Node — which has
-// no DOMParser — by letting tests build plain objects instead.
+// by fromDom() below, which keeps the serialiser testable in Node - which has
+// no DOMParser - by letting tests build plain objects instead.
 export type RichNode =
   | { type: "text"; text: string }
   | { type: "element"; tag: string; children: RichNode[] };
@@ -21,7 +21,7 @@ export type RichNode =
 const BOLD_TAGS = new Set(["b", "strong"]);
 const ITALIC_TAGS = new Set(["i", "em"]);
 // Tags that end a line. A contenteditable produces these on Enter, and which
-// one it picks varies by browser — so handle both rather than depending on it.
+// one it picks varies by browser - so handle both rather than depending on it.
 const BLOCK_TAGS = new Set(["div", "p"]);
 
 // A run of text sharing one set of formatting flags. Collected before emitting
@@ -66,7 +66,7 @@ function collect(
       continue;
     }
 
-    // Everything else — <span>, <script>, <img>, anything pasted. The element
+    // Everything else - <span>, <script>, <img>, anything pasted. The element
     // itself is ignored and only its text survives. This is the default that
     // makes the walker safe by construction.
     collect(node.children, bold, italic, runs);
@@ -86,7 +86,7 @@ export function serializeRichText(nodes: RichNode[]): string {
   // * are two independent toggles there, not a stack of nested tags, so **
   // and * never need to interact here either. The previous version modeled
   // this as nested HTML-like tags (bold always closing outside italic) and
-  // had to close-and-reopen the other format whenever one of them ended —
+  // had to close-and-reopen the other format whenever one of them ended -
   // which is not only unnecessary but actively wrong: it can print two
   // markers of the same kind back to back (e.g. "****"), and parseSpans
   // reads a repeated marker with nothing between as an EMPTY, non-toggling

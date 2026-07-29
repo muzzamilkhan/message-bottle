@@ -23,7 +23,7 @@ export async function getAccessibleChildren(
 
 // A child as shown in a letter's recipient <select>. No `photo`: options
 // render as `{avatar} {name}` text, and an <img> can't live inside <option>,
-// so shipping the ~9KB data URL to the browser would be dead weight — strip
+// so shipping the ~9KB data URL to the browser would be dead weight - strip
 // it here rather than at the client component boundary.
 export type LetterChildOption = Omit<AccessibleChild, "photo">;
 

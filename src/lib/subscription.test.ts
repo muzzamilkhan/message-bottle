@@ -1,6 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { canUploadImages, IMAGE_UPLOAD_TIERS } from "./subscription.ts";
+import {
+  canUploadImages,
+  describeSubscription,
+  IMAGE_UPLOAD_TIERS,
+} from "./subscription.ts";
 
 describe("canUploadImages", () => {
   it("allows a PRO subscriber", () => {
@@ -29,5 +33,29 @@ describe("canUploadImages", () => {
 
   it("names PRO as the only tier for now", () => {
     assert.deepEqual([...IMAGE_UPLOAD_TIERS], ["PRO"]);
+  });
+});
+
+describe("describeSubscription", () => {
+  it("labels a PRO subscriber as Pro", () => {
+    const result = describeSubscription("PRO");
+    assert.equal(result.label, "Pro");
+    assert.equal(result.isPro, true);
+  });
+
+  it("labels everyone else as Free", () => {
+    for (const value of [null, undefined, "", "PLUS", "pro"]) {
+      const result = describeSubscription(value);
+      assert.equal(result.label, "Free");
+      assert.equal(result.isPro, false);
+    }
+  });
+
+  // isPro must mean exactly "may upload images", so the account page and the
+  // upload gate can never disagree about who is Pro.
+  it("agrees with canUploadImages", () => {
+    for (const value of [null, undefined, "", "PRO", "pro", "PLUS"]) {
+      assert.equal(describeSubscription(value).isPro, canUploadImages(value));
+    }
   });
 });

@@ -1,5 +1,5 @@
 // One-time backfill: encrypt the title and body of every letter that predates
-// encryption-at-rest. Safe to run more than once — a row already carrying the
+// encryption-at-rest. Safe to run more than once - a row already carrying the
 // scheme prefix is left alone, so a re-run only touches what a previous run
 // missed (or letters written before encryption shipped).
 //

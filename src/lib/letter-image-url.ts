@@ -3,7 +3,7 @@
 // This is the one place the image query string is built. The route in
 // src/app/api/letter-image/[id]/route.ts reads exactly these params back, so
 // keeping construction in a pure function is what stops the two sides from
-// drifting — a client that forgets a param the route requires renders a broken
+// drifting - a client that forgets a param the route requires renders a broken
 // <img>, which is the bug this helper exists to prevent.
 
 export type LetterImageUrlOptions = {
@@ -27,7 +27,7 @@ export function letterImageUrl(
   // URL this image is embedded on.
   if (openToken) params.set("t", openToken);
 
-  // Only meaningful alongside a token — the bypass exists for the child's open
+  // Only meaningful alongside a token - the bypass exists for the child's open
   // page, and the route ignores it on any other path. Sending it while signed
   // in would be noise on a URL that is already authorized by session.
   if (bypass && openToken) params.set("test", "yes");

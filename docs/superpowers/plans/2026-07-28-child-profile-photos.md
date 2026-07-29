@@ -4,7 +4,7 @@
 
 **Goal:** Let parents upload a profile photo for a child, downscaled in the browser to a 160×160 thumbnail and stored as a data URL on the `Child` row.
 
-**Architecture:** A nullable `photo` column on `Child` holds a `data:image/webp;base64,…` URL (~7–9 KB). Pure crop/scale/validate rules live in a tested `src/lib/child-photo.ts`; the canvas work lives in an untested client component. A photo overrides the emoji `avatar`, which stays set as the fallback, and a shared `<ChildAvatar>` renders the branch once.
+**Architecture:** A nullable `photo` column on `Child` holds a `data:image/webp;base64,…` URL (~7-9 KB). Pure crop/scale/validate rules live in a tested `src/lib/child-photo.ts`; the canvas work lives in an untested client component. A photo overrides the emoji `avatar`, which stays set as the fallback, and a shared `<ChildAvatar>` renders the branch once.
 
 **Tech Stack:** Next.js 15 App Router, React 19, Prisma 6 / Postgres, Tailwind 3, `node --test` with native TypeScript stripping.
 
@@ -14,7 +14,7 @@
 
 - Work directly on `main`. Atomic commits, one logical change each. Push when done.
 - **Never skip the pre-commit hook.** No `git commit --no-verify`, no disabling checks. If it fails on code you didn't touch, stop and say so.
-- Verify with `npm test && npm run typecheck && npm run lint`. **Never** run `npm run build` — it runs `prisma db push --accept-data-loss` against the real database.
+- Verify with `npm test && npm run typecheck && npm run lint`. **Never** run `npm run build` - it runs `prisma db push --accept-data-loss` against the real database.
 - Dev server is already running on :3000. Do not start another; see `dev.log`.
 - Modules under `src/lib/` import each other with **relative paths and explicit `.ts` extensions** (`./avatars.ts`). App code outside `src/lib/` uses the `@/` alias.
 - Validation libs return **error codes**, never user-facing copy. The calling action maps a code to its message.
@@ -45,11 +45,11 @@
 
 ## Task Order
 
-Tasks 1–3 are pure and testable in isolation. Task 4 wires the database. Tasks 5–7 are UI. Each task ends green and committed.
+Tasks 1-3 are pure and testable in isolation. Task 4 wires the database. Tasks 5-7 are UI. Each task ends green and committed.
 
 ---
 
-### Task 1: Photo geometry — crop and downscale math
+### Task 1: Photo geometry - crop and downscale math
 
 **Files:**
 - Create: `src/lib/child-photo.ts`
@@ -140,7 +140,7 @@ test("downscaleSteps", async (t) => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test src/lib/child-photo.test.ts`
-Expected: FAIL — cannot find module `./child-photo.ts`.
+Expected: FAIL - cannot find module `./child-photo.ts`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -156,7 +156,7 @@ Create `src/lib/child-photo.ts`:
 // emoji slot on the open page) at 2x DPR with headroom to spare.
 export const PHOTO_SIZE = 160;
 
-// Decoded byte cap for a stored photo. Generous for 160px — a quality-0.82
+// Decoded byte cap for a stored photo. Generous for 160px - a quality-0.82
 // WebP at that size lands around 7-9 KB.
 export const PHOTO_MAX_BYTES = 20 * 1024;
 
@@ -343,7 +343,7 @@ test("childPhotoMessage returns a message for every error code", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test src/lib/child-photo.test.ts`
-Expected: FAIL — `parsePhotoDataUrl` is not exported.
+Expected: FAIL - `parsePhotoDataUrl` is not exported.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -351,7 +351,7 @@ Append to `src/lib/child-photo.ts`:
 
 ```ts
 // Why a photo was rejected. Codes rather than copy, so tests assert on rules
-// and wording stays free to change — same convention as child-input.ts.
+// and wording stays free to change - same convention as child-input.ts.
 export type ChildPhotoError =
   | "PHOTO_NOT_AN_IMAGE"
   | "PHOTO_MALFORMED"
@@ -396,7 +396,7 @@ export function parsePhotoDataUrl(input: string): PhotoParseResult {
   if (base64.length % 4 !== 0) return { ok: false, error: "PHOTO_MALFORMED" };
 
   // Derive the decoded length from the encoded length rather than allocating
-  // the buffer — this runs on every submit, and we may be about to reject it.
+  // the buffer - this runs on every submit, and we may be about to reject it.
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
   const bytes = (base64.length / 4) * 3 - padding;
   if (bytes <= 0) return { ok: false, error: "PHOTO_MALFORMED" };
@@ -432,7 +432,7 @@ git commit -m "Validate child photo data URLs server-side"
 
 **Why three states:** editing a child must tell "the parent didn't touch the photo" (`keep` → `undefined` → Prisma leaves the column alone) from "the parent removed it" (`clear` → `null` → Prisma nulls it). An empty `photo` string alone can't express both.
 
-**Why `hasPhoto` and not the data URL:** `values` is echoed back on validation errors so the form can repopulate. A ~9 KB data URL riding in that payload on every failed submit is waste — the photo never left the browser, so the client keeps it in React state across the re-render.
+**Why `hasPhoto` and not the data URL:** `values` is echoed back on validation errors so the form can repopulate. A ~9 KB data URL riding in that payload on every failed submit is waste - the photo never left the browser, so the client keeps it in React state across the re-render.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -483,7 +483,7 @@ Add to `src/lib/child-input.test.ts`, inside the existing `parseChildInput` suit
     });
 
     await t.test("falls back to keep for an unrecognised action", () => {
-      // A bad value means a stale client, not a user mistake — same reasoning
+      // A bad value means a stale client, not a user mistake - same reasoning
       // as an unknown avatar falling back to the default.
       const result = parseChildInput(
         { ...base, photo: "", photoAction: "nonsense" },
@@ -545,7 +545,7 @@ Also update the existing `childInputMessage` "returns a message for every error 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test src/lib/child-input.test.ts`
-Expected: FAIL — `parseChildInput` rejects the extra `photo`/`photoAction` properties (TypeScript) and `value.photo` is undefined at runtime.
+Expected: FAIL - `parseChildInput` rejects the extra `photo`/`photoAction` properties (TypeScript) and `value.photo` is undefined at runtime.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -571,7 +571,7 @@ export type ChildFormValues = {
   avatar: string;
   birthday: string;
   openAtAge: string;
-  // Whether a photo was submitted — not the photo itself. The ~9 KB data URL
+  // Whether a photo was submitted - not the photo itself. The ~9 KB data URL
   // stays in the browser's React state across an error re-render rather than
   // making a round trip in the echoed values.
   hasPhoto: boolean;
@@ -692,7 +692,7 @@ return, resolve the photo:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test src/lib/child-input.test.ts && npm run typecheck`
-Expected: PASS. Typecheck reports an error in `src/app/actions.ts` — `parseChildForm` doesn't yet pass `photo`/`photoAction`. That is expected and Task 4 fixes it; do not patch it here.
+Expected: PASS. Typecheck reports an error in `src/app/actions.ts` - `parseChildForm` doesn't yet pass `photo`/`photoAction`. That is expected and Task 4 fixes it; do not patch it here.
 
 - [ ] **Step 5: Commit**
 
@@ -701,7 +701,7 @@ git add src/lib/child-input.ts src/lib/child-input.test.ts
 git commit -m "Parse and validate child photo input"
 ```
 
-Note: the pre-commit hook runs typecheck and **will fail** on the `actions.ts` error above. Do not commit this task separately — instead, complete Task 4 and commit Tasks 3 and 4 together with the message above plus Task 4's changes. The two are one logical change to the type surface.
+Note: the pre-commit hook runs typecheck and **will fail** on the `actions.ts` error above. Do not commit this task separately - instead, complete Task 4 and commit Tasks 3 and 4 together with the message above plus Task 4's changes. The two are one logical change to the type surface.
 
 ---
 
@@ -730,7 +730,7 @@ In `prisma/schema.prisma`, in `model Child`, directly below the `avatar` field:
 - [ ] **Step 2: Generate the client and apply the column**
 
 Run: `npx prisma generate && npm run db:push`
-Expected: `prisma generate` succeeds and `db:push` reports the `photo` column added. This is additive and nullable — no data loss.
+Expected: `prisma generate` succeeds and `db:push` reports the `photo` column added. This is additive and nullable - no data loss.
 
 - [ ] **Step 3: Pass the photo fields through `parseChildForm`**
 
@@ -755,7 +755,7 @@ preserve, so `undefined` means no photo):
       photo: parsed.photo ?? null,
 ```
 
-In `updateChild`, add to the `data` object (`undefined` here is meaningful —
+In `updateChild`, add to the `data` object (`undefined` here is meaningful -
 Prisma leaves the column untouched):
 
 ```ts
@@ -796,11 +796,11 @@ git commit -m "Store an optional profile photo on Child"
 | `lg` | `text-4xl` | 48 | `dashboard/page.tsx:63`, `children/page.tsx:102`, `child-card.tsx:66` |
 | `xl` | `text-5xl` | 64 | `open/[token]/page.tsx:106` |
 
-**Sites that must NOT change** — these render the emoji as text and cannot hold an `<img>`. Do not add `photo` to their selects:
-- `src/app/invite/[token]/page.tsx:55` — `${k.avatar} ${k.name}` in a prose sentence.
-- `src/app/share/page.tsx:81` — same, in the invite summary.
-- `src/components/letter-form.tsx:94` — inside a `<select>` `<option>`, whose content model is text only. An `<img>` there fails silently.
-- `src/app/dashboard/page.tsx:127` — `{draft.child?.avatar ?? "💌"}` is inline text in a `<p>` with an emoji fallback for a letter with no recipient.
+**Sites that must NOT change** - these render the emoji as text and cannot hold an `<img>`. Do not add `photo` to their selects:
+- `src/app/invite/[token]/page.tsx:55` - `${k.avatar} ${k.name}` in a prose sentence.
+- `src/app/share/page.tsx:81` - same, in the invite summary.
+- `src/components/letter-form.tsx:94` - inside a `<select>` `<option>`, whose content model is text only. An `<img>` there fails silently.
+- `src/app/dashboard/page.tsx:127` - `{draft.child?.avatar ?? "💌"}` is inline text in a `<p>` with an emoji fallback for a letter with no recipient.
 
 - [ ] **Step 1: Create the component**
 
@@ -897,11 +897,11 @@ export type EditableChild = {
 
 In `src/app/children/page.tsx`, add `photo: true` to the owned-children select and to the shared-children select, and add `photo: child.photo` to the `childCards` mapping.
 
-In `src/app/share/page.tsx`, add `photo: true` to the select on line 19 and to the `share.child` select on line 33. **Leave the select on line 25 alone** — it feeds the prose summary on line 81.
+In `src/app/share/page.tsx`, add `photo: true` to the select on line 19 and to the `share.child` select on line 33. **Leave the select on line 25 alone** - it feeds the prose summary on line 81.
 
 In `src/app/open/[token]/page.tsx`, add `photo: true` to the child select feeding line 106.
 
-In `src/app/dashboard/page.tsx`, the children come from `getAccessibleChildren`, which now includes `photo`. **Leave the `draft` include on line 20 alone** — it feeds the text fallback on line 127.
+In `src/app/dashboard/page.tsx`, the children come from `getAccessibleChildren`, which now includes `photo`. **Leave the `draft` include on line 20 alone** - it feeds the text fallback on line 127.
 
 - [ ] **Step 3: Swap each visual call site**
 
@@ -911,7 +911,7 @@ Replace each span with the component, importing `ChildAvatar` from `@/components
 // dashboard/page.tsx:63, children/page.tsx:102, child-card.tsx:66
 <ChildAvatar child={child} name={child.name} size="lg" />
 
-// open/[token]/page.tsx:106 — replaces the <div className="text-5xl">
+// open/[token]/page.tsx:106 - replaces the <div className="text-5xl">
 <ChildAvatar child={child} name={child.name} size="xl" />
 
 // letter-form.tsx:73
@@ -933,7 +933,7 @@ Expected: all green. If lint flags `@next/next/no-img-element`, confirm the disa
 
 - [ ] **Step 5: Check the app still renders**
 
-Visit http://localhost:3000/children and http://localhost:3000/dashboard. Every child should still show their emoji exactly as before — no photos exist yet, so this task is a pure refactor with no visible change. Check `dev.log` if a page errors.
+Visit http://localhost:3000/children and http://localhost:3000/dashboard. Every child should still show their emoji exactly as before - no photos exist yet, so this task is a pure refactor with no visible change. Check `dev.log` if a page errors.
 
 - [ ] **Step 6: Commit**
 
@@ -950,10 +950,10 @@ git commit -m "Render child avatars through a shared ChildAvatar component"
 - Create: `src/components/child-photo-input.tsx`
 
 **Interfaces:**
-- Consumes: `PHOTO_SIZE`, `PHOTO_MAX_BYTES`, `PHOTO_MAX_UPLOAD_BYTES`, `PHOTO_MIME_TYPES`, `PHOTO_QUALITY_LADDER`, `coverCrop`, `downscaleSteps`, `childPhotoMessage`, `ChildPhotoError` from Tasks 1–2.
+- Consumes: `PHOTO_SIZE`, `PHOTO_MAX_BYTES`, `PHOTO_MAX_UPLOAD_BYTES`, `PHOTO_MIME_TYPES`, `PHOTO_QUALITY_LADDER`, `coverCrop`, `downscaleSteps`, `childPhotoMessage`, `ChildPhotoError` from Tasks 1-2.
 - Produces: `<ChildPhotoInput initialPhoto={string | null} onChange={(photo: string | null, touched: boolean) => void} />` and the exported helper `compressToDataUrl(file: File): Promise<{ ok: true; dataUrl: string } | { ok: false; error: ChildPhotoError }>`.
 
-This component is **not tested** — it needs a DOM and a canvas. All the rules it applies live in `src/lib/child-photo.ts` and are tested there, which is the point of the split.
+This component is **not tested** - it needs a DOM and a canvas. All the rules it applies live in `src/lib/child-photo.ts` and are tested there, which is the point of the split.
 
 - [ ] **Step 1: Write the component**
 
@@ -1000,7 +1000,7 @@ export async function compressToDataUrl(file: File): Promise<CompressResult> {
   try {
     const crop = coverCrop(bitmap.width, bitmap.height);
 
-    // Step down through the ladder — drawing a huge photo straight to 160px
+    // Step down through the ladder - drawing a huge photo straight to 160px
     // aliases badly, so each pass at most halves.
     let canvas = document.createElement("canvas");
     let source: CanvasImageSource = bitmap;
@@ -1150,7 +1150,7 @@ export function ChildPhotoInput({
       </div>
 
       <p className="mt-1 text-xs text-sea-500">
-        Optional — a photo replaces the emoji below. It&apos;s shrunk on your
+        Optional - a photo replaces the emoji below. It&apos;s shrunk on your
         device before saving.
       </p>
 
@@ -1264,7 +1264,7 @@ At http://localhost:3000/children:
 1. **Add a child with a photo.** Pick a large landscape phone photo. It should compress in well under a second, preview as a centered circle, and save. The card shows the photo, not the emoji.
 2. **Check the crop.** A landscape source should be center-cropped, not squashed.
 3. **Check EXIF.** A photo taken in portrait on a phone should appear upright.
-4. **Edit without touching the photo.** Change only the name and save — the photo must survive (`photoAction=keep`).
+4. **Edit without touching the photo.** Change only the name and save - the photo must survive (`photoAction=keep`).
 5. **Remove the photo.** The emoji returns, and the card falls back to it.
 6. **Trigger a validation error with a photo attached.** Set the open age to one the child has already passed. The error renders *and* the photo preview survives the re-render.
 7. **Check the other surfaces.** The photo appears on `/dashboard`, in the letter form's locked-child header, on `/share`, and on the child's `/open/<token>` page. It stays an emoji in the recipient `<select>`.
@@ -1283,10 +1283,10 @@ git push origin main
 
 ## Self-Review
 
-**Spec coverage:** Storage column → Task 4. Query discipline → Task 5 Step 2, with the four text-only sites named explicitly. Compression lib → Tasks 1–2. Canvas wrapper (EXIF, step-down, quality ladder, upload guard) → Task 6. Form integration and three hidden fields → Task 7. `hasPhoto` echo-back → Task 3. Server re-validation → Task 2, called from Task 3, wired in Task 4. `<ChildAvatar>` and its size mapping → Task 5. Testing → Tasks 1–3.
+**Spec coverage:** Storage column → Task 4. Query discipline → Task 5 Step 2, with the four text-only sites named explicitly. Compression lib → Tasks 1-2. Canvas wrapper (EXIF, step-down, quality ladder, upload guard) → Task 6. Form integration and three hidden fields → Task 7. `hasPhoto` echo-back → Task 3. Server re-validation → Task 2, called from Task 3, wired in Task 4. `<ChildAvatar>` and its size mapping → Task 5. Testing → Tasks 1-3.
 
 **Type consistency:** `ParsedChild.photo` is `string | null | undefined` in Task 3 and consumed with that exact meaning in Task 4 (`?? null` on create, passed through on update). `AccessibleChild.photo` and `EditableChild.photo` are both `string | null`, matching `ChildAvatar`'s `photo?: string | null`. `ChildPhotoError` is defined once in Task 2 and reused in Tasks 3 and 6. `compressToDataUrl` returns the same shape it is destructured with.
 
 **Known deviation from the spec:** the spec describes `parsePhotoDataUrl` returning error codes including `PHOTO_TOO_LARGE_TO_READ`, but that code is only ever produced client-side (Task 6's pre-decode guard), never by `parsePhotoDataUrl` itself. It stays in the shared `ChildPhotoError` union so `childPhotoMessage` covers it. This is intentional, not a gap.
 
-**Commit-boundary note:** Task 3 cannot be committed alone — it breaks typecheck until Task 4 updates `parseChildForm`. The plan commits them together, which is the correct atomic unit. Do not work around this by skipping the pre-commit hook.
+**Commit-boundary note:** Task 3 cannot be committed alone - it breaks typecheck until Task 4 updates `parseChildForm`. The plan commits them together, which is the correct atomic unit. Do not work around this by skipping the pre-commit hook.

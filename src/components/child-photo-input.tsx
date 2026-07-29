@@ -39,7 +39,7 @@ export async function compressToDataUrl(file: File): Promise<CompressResult> {
   try {
     const crop = coverCrop(bitmap.width, bitmap.height);
 
-    // Step down through the ladder — drawing a huge photo straight to 160px
+    // Step down through the ladder - drawing a huge photo straight to 160px
     // aliases badly, so each pass at most halves.
     let canvas = document.createElement("canvas");
     let source: CanvasImageSource = bitmap;
@@ -74,7 +74,7 @@ export async function compressToDataUrl(file: File): Promise<CompressResult> {
     // wins. If even the lowest quality overshoots, the photo is too dense to
     // fit at this size, so drop to a smaller square and try again. Each rung
     // redraws from the previous one, and the ladder's floor guarantees this
-    // terminates — a real photo lands on the first rung, so nothing shrinks
+    // terminates - a real photo lands on the first rung, so nothing shrinks
     // past the stored size.
     for (const size of shrinkLadder(PHOTO_SIZE)) {
       if (size !== canvas.width) {
@@ -150,7 +150,7 @@ export function ChildPhotoInput({
     setError(null);
     try {
       // compressToDataUrl enumerates its failures as {ok:false}, but this
-      // code has never run in a browser during implementation — an
+      // code has never run in a browser during implementation - an
       // unenumerated throw (FileReader rejecting, drawImage raising a
       // security error) is still possible, and without a catch it would
       // leave the button stuck on "Shrinking…" forever.
@@ -227,7 +227,7 @@ export function ChildPhotoInput({
       </div>
 
       <p className="mt-1 text-xs text-sea-500">
-        Optional — a photo replaces the emoji below. It&apos;s shrunk on your
+        Optional - a photo replaces the emoji below. It&apos;s shrunk on your
         device before saving.
       </p>
 

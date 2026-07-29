@@ -88,7 +88,7 @@ async function isAuthorized(
 //
 // The rule is that the server never ships letter content before the age gate,
 // and an inline photograph is letter content. /open/[token] already refuses to
-// render bodies while locked, but this route is directly addressable — so it
+// render bodies while locked, but this route is directly addressable - so it
 // has to check for itself, and it never trusts a client-supplied claim about
 // age or unlock state.
 async function childMayRead(

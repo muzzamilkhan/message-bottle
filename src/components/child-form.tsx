@@ -144,7 +144,7 @@ export function ChildForm({
           required
         />
         <p className="mt-1 text-xs text-sea-500">
-          Pick the full date — the bottle timer counts the years from it.
+          Pick the full date - the bottle timer counts the years from it.
         </p>
       </div>
 

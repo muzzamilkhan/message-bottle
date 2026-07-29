@@ -33,7 +33,11 @@ export default async function NewLetter({
 
   return (
     <>
-      <Header userName={session.user.name} />
+      <Header
+        userName={session.user.name}
+        userImage={session.user.image}
+        isPro={canUploadImages(author?.subscription)}
+      />
       <main className="mx-auto max-w-2xl px-6 py-10">
         <Link
           href="/dashboard"

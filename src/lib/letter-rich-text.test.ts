@@ -52,7 +52,7 @@ describe("serializeRichText", () => {
   it("keeps italic open across a bold run that closes inside it", () => {
     // <i>a<b>b</b></i><i>c</i>: italic never actually stops, only bold
     // toggles on then off within it. Toggling each format independently of
-    // the other must leave italic's markers untouched by bold's — closing
+    // the other must leave italic's markers untouched by bold's - closing
     // italic here (as the old bold-is-always-outer version did whenever
     // bold changed) would print "****" between b and c, which the parser
     // reads as an empty, non-toggling marker pair and loses the formatting
@@ -99,7 +99,7 @@ describe("serializeRichText", () => {
     assert.equal(serializeRichText([el("p", t("One"))]), "One\n");
   });
 
-  // The security cases. An unhandled element is not "stripped" — it is simply
+  // The security cases. An unhandled element is not "stripped" - it is simply
   // not a case the walker handles, so only its text survives, into a string
   // that reaches the child as a text node.
   it("keeps only the text of a script element", () => {

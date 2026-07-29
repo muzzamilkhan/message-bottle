@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   childInputMessage,
@@ -104,13 +104,13 @@ export async function saveLetter(
   };
 
   if (id) {
-    // Only update the author's own letter, and only while it's still a draft —
+    // Only update the author's own letter, and only while it's still a draft -
     // a sent letter is sealed forever.
     //
     // The status flip to SENT and the image claim/stale-lookup must commit
     // together: if the write landed but the claim never ran (a dropped
     // connection, a function timeout), the letter would be sealed forever
-    // while its just-uploaded image sat unattached — and the orphan sweep,
+    // while its just-uploaded image sat unattached - and the orphan sweep,
     // which only ever looks at unattached rows, would delete it 24h later out
     // from under a letter nothing can reconcile again. Blob deletion is a
     // network call and can't join a DB transaction, so it happens after this
@@ -159,7 +159,7 @@ export type LetterImageState = {
 // body as a [[img:<id>]] marker.
 //
 // Uploading is the Pro-gated half of this feature. The button is hidden for
-// free users, but that is UX — this check is the boundary, because anyone can
+// free users, but that is UX - this check is the boundary, because anyone can
 // POST to a server action.
 export async function uploadLetterImage(
   _prev: LetterImageState,
@@ -197,7 +197,7 @@ export async function uploadLetterImage(
   if (!check.ok) return { error: letterImageMessage(check.error) };
 
   // A letter id is present when editing a saved draft, absent for a letter
-  // that hasn't been saved yet — those rows start unattached and are claimed
+  // that hasn't been saved yet - those rows start unattached and are claimed
   // on first save.
   const letterId = String(formData.get("letterId") ?? "").trim();
   let attachedTo: string | null = null;
@@ -212,7 +212,7 @@ export async function uploadLetterImage(
     }
     attachedTo = letter.id;
   } else {
-    // No letter yet — the common case for a brand-new draft. Without this,
+    // No letter yet - the common case for a brand-new draft. Without this,
     // a client could upload without bound before any letter exists to cap
     // against: each upload is a real blob sitting in the store for up to 24h,
     // and an unmetered write against it besides.
@@ -248,7 +248,7 @@ export async function uploadLetterImage(
 }
 
 // Claim rows uploaded for this letter before it had an id, and delete rows
-// (not blobs) for images the body no longer references — then hand back what
+// (not blobs) for images the body no longer references - then hand back what
 // it deleted so the caller can remove those blobs after the transaction
 // commits.
 //
@@ -262,7 +262,7 @@ export async function uploadLetterImage(
 // Runs inside the same transaction as the letter write that calls it: the
 // status flip to SENT and this claim/delete must commit together, or a
 // dropped connection between the two could seal a letter while its
-// just-uploaded image row was still unattached — and the orphan sweep, which
+// just-uploaded image row was still unattached - and the orphan sweep, which
 // only looks at unattached rows, would delete it later out from under a
 // letter nothing can reconcile again.
 async function reconcileLetterImageRows(
@@ -271,7 +271,7 @@ async function reconcileLetterImageRows(
 ): Promise<{ id: string; pathname: string }[]> {
   // The body is the single authority on what is referenced. The cap is
   // enforced upstream by parseLetterInput, which rejects an over-cap save
-  // outright — so nothing here needs to trim, and the parser and reconciliation
+  // outright - so nothing here needs to trim, and the parser and reconciliation
   // can never disagree about what "referenced" means.
   const referenced = letterImageIds(input.body);
 
@@ -416,21 +416,21 @@ export async function deleteChild(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  // Removing a child is destructive: every letter written to them — drafts and
-  // sealed alike — is deleted forever, and the private open link stops working.
+  // Removing a child is destructive: every letter written to them - drafts and
+  // sealed alike - is deleted forever, and the private open link stops working.
   const child = await prisma.child.findFirst({
     where: { id, parentId: session.user.id },
     select: { id: true },
   });
   if (!child) return;
 
-  // Every letter written to this child, drafts and sealed alike — and the
+  // Every letter written to this child, drafts and sealed alike - and the
   // photos inside them.
   //
   // The pathnames are collected inside the same transaction that deletes the
   // letters, so the list is taken from the same snapshot the delete acts on. A
-  // concurrent save attaching an image to one of these letters — a second tab
-  // mid-edit — either lands before the snapshot (and is collected) or after the
+  // concurrent save attaching an image to one of these letters - a second tab
+  // mid-edit - either lands before the snapshot (and is collected) or after the
   // delete (and has no letter to attach to); it can't slip between the two and
   // leave its blob orphaned in storage.
   const pathnames = await prisma.$transaction(async (tx) => {
@@ -446,11 +446,45 @@ export async function deleteChild(formData: FormData): Promise<void> {
 
   // Blob deletion is a network call and never belongs inside a transaction, so
   // it runs after the commit. A failure here leaves blobs with no rows pointing
-  // at them — unreachable, and swept later — which is the safe direction.
+  // at them - unreachable, and swept later - which is the safe direction.
   await deleteLetterImages(pathnames);
 
   revalidatePath("/children");
   revalidatePath("/dashboard");
+}
+
+// Permanently delete the signed-in user and everything hanging off them. This
+// is the account-closure promise the account page makes: every child, every
+// letter (draft and sealed alike), and every photo inside those letters goes
+// with the account.
+//
+// The database side is a single cascade from the User row - children, letters,
+// letter-image rows, OAuth accounts, and sessions all carry
+// `onDelete: Cascade`. The blob bytes never do (blob deletion is always
+// explicit), so we gather every pathname this author owns and delete those
+// blobs first, then drop the user. A blob failure leaves unreachable bytes
+// (swept later), which is the safe direction; a row-first order could strand a
+// live photo no row points at.
+export async function deleteAccount(): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const userId = session.user.id;
+
+  // Every photo this author ever uploaded, whether attached to a letter or
+  // still unattached - the cascade will take the rows, but never the bytes.
+  const images = await prisma.letterImage.findMany({
+    where: { authorId: userId },
+    select: { pathname: true },
+  });
+  await deleteLetterImages(images.map((image) => image.pathname));
+
+  // Deleting the user cascades to children, letters, letter-image rows,
+  // accounts, and sessions.
+  await prisma.user.delete({ where: { id: userId } });
+
+  // The session row is already gone with the user; sign out to clear the
+  // cookie and land back on the marketing page.
+  await signOut({ redirectTo: "/" });
 }
 
 export async function deleteLetter(formData: FormData): Promise<void> {

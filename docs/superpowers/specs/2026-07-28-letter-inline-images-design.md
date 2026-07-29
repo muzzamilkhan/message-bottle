@@ -29,14 +29,14 @@ alongside them; a `User.subscription` column gating uploads.
 Out of scope: a billing system, a checkout flow, or any way to *become* Pro. This design
 introduces the flag and the gate only; the column is set by hand until billing exists.
 Also out of scope: video, audio, captions, alt-text authoring, and image reordering by
-drag — the marker is text and moves by editing it.
+drag - the marker is text and moves by editing it.
 
 ## Data model
 
 ```prisma
 model LetterImage {
   id        String   @id @default(cuid())
-  // Pathname in the private blob store. Never a public URL — bytes are only
+  // Pathname in the private blob store. Never a public URL - bytes are only
   // served through /api/letter-image/[id] after an authorization check.
   pathname  String   @unique
   // Stored so the renderer can reserve the aspect box before the image loads,
@@ -67,7 +67,7 @@ model LetterImage {
 subscription String?
 ```
 
-`onDelete: Cascade` on `letterId` removes rows when a letter goes, but **not the blobs** —
+`onDelete: Cascade` on `letterId` removes rows when a letter goes, but **not the blobs** -
 blob deletion is never automatic and must be done explicitly wherever letters are deleted.
 This is the feature's sharpest edge: a missed `del()` leaves a personal photograph in
 storage after the user believed they deleted it.
@@ -87,7 +87,7 @@ export function canUploadImages(subscription: string | null | undefined): boolea
 Adding a tier means adding a string. Nothing else in the codebase compares `subscription`
 directly.
 
-### Where the gate applies — and where it must not
+### Where the gate applies - and where it must not
 
 **Gated: uploading.** `uploadLetterImage` loads the caller's `subscription` and rejects a
 non-Pro user before touching the blob store. The hidden button is UX; the action is the
@@ -95,7 +95,7 @@ boundary, because anyone can POST to a server action.
 
 **Gated: sealing a letter that contains images.** If a subscription lapses while a draft
 holds images, the draft cannot be sealed until the images are removed. This is a second,
-deliberate check — see "Lapsed subscriptions" below.
+deliberate check - see "Lapsed subscriptions" below.
 
 **Never gated: reading.** Rendering an existing image must not consult `subscription`:
 
@@ -111,13 +111,13 @@ deliberate check — see "Lapsed subscriptions" below.
 A Pro user adds images to a draft, then lapses before sealing. The images stay in the
 draft and still render, but the letter cannot be sealed while they remain.
 
-`parseLetterInput` gains an input — whether the author may currently hold images — and a
+`parseLetterInput` gains an input - whether the author may currently hold images - and a
 new error code `SEND_IMAGES_NOT_ALLOWED`, mapped to copy that says the letter contains
 photos the subscription no longer covers and can be sealed after removing them or renewing.
 The check belongs in the pure lib with the other sealing rules, keeping "what makes a
 letter sealable" in one testable place.
 
-Saving the draft is *not* blocked — only sealing. A parent must never be locked out of
+Saving the draft is *not* blocked - only sealing. A parent must never be locked out of
 their own unsent words.
 
 ## Storage
@@ -139,7 +139,7 @@ auto-rotating OIDC token scoped to the project, so no static read-write token si
 production environment. Local development uses `BLOB_READ_WRITE_TOKEN` from `vercel env pull`.
 
 Pathname: `letters/<authorId>/<cuid>.webp`, with `addRandomSuffix: true`. The suffix makes
-even the pathname unguessable — defence in depth for a path that should never be reachable
+even the pathname unguessable - defence in depth for a path that should never be reachable
 by URL in the first place.
 
 ### Integration on Vercel
@@ -165,11 +165,11 @@ A rejected request returns **404, not 403**, because a 403 would confirm that an
 
 Allowed if any one of these holds:
 
-1. **Author** — `session.user.id === image.authorId`. Covers writing and reviewing a draft.
-2. **Co-parent** — signed in and `canAccessChild(session.user.id, letter.childId)` returns
+1. **Author** - `session.user.id === image.authorId`. Covers writing and reviewing a draft.
+2. **Co-parent** - signed in and `canAccessChild(session.user.id, letter.childId)` returns
    true. Reuses `src/lib/children.ts` rather than replicating the `OR` clause, per the
    existing rule about the two access models.
-3. **Child** — the request carries the child's `openToken` as `?t=`, the letter is `SENT`,
+3. **Child** - the request carries the child's `openToken` as `?t=`, the letter is `SENT`,
    **and** `hasReachedOpenAge(child.birthday, child.openAtAge)` passes.
 
 Nothing else. An image whose letter has no child (an unassigned draft) is reachable by its
@@ -179,13 +179,13 @@ author alone.
 
 Case 3 is the existing invariant extended, and it is the reason this route cannot be
 skipped. The project rule is that the server never ships letter content before the age
-gate — an inline photograph is letter content. `/open/[token]/page.tsx` already refuses to
+gate - an inline photograph is letter content. `/open/[token]/page.tsx` already refuses to
 render bodies while locked, but that page is not the only way to reach an image: the route
 is directly addressable, so it must re-derive the gate itself from the `Child` row. It
 never trusts a client-supplied claim about age or unlock state.
 
 The `?t=` query parameter carries the token because an `<img>` element cannot send a
-header. This exposes nothing new — the same token is already the credential in the page URL
+header. This exposes nothing new - the same token is already the credential in the page URL
 the image is embedded on.
 
 `TESTING=true` plus `?test=yes` bypasses the age gate here exactly as it does on the page.
@@ -200,7 +200,7 @@ defeat the entire authorization path.
 
 ## Body format
 
-The body column is unchanged — still `String @db.Text`, still plain text. No migration, and
+The body column is unchanged - still `String @db.Text`, still plain text. No migration, and
 no rewriting of sealed letters, which the "sealing is final" invariant would make
 uncomfortable.
 
@@ -216,7 +216,7 @@ You took your first steps today.
 I cried, obviously.
 ```
 
-### `src/lib/letter-body.ts` — pure, tested
+### `src/lib/letter-body.ts` - pure, tested
 
 ```ts
 export type Span = { text: string; bold: boolean; italic: boolean };
@@ -235,7 +235,7 @@ The grammar is deliberately tiny:
 - `**text**` is bold, `*text*` is italic. They may nest.
 - A line matching exactly `[[img:<cuid>]]` becomes an image node. A marker with text around
   it on the same line is left as literal text.
-- Everything else is literal, including unmatched `**` — a stray asterisk renders as an
+- Everything else is literal, including unmatched `**` - a stray asterisk renders as an
   asterisk rather than producing an error or eating the rest of the letter.
 
 `letterImageIds` is the same parser used by cleanup, so what the renderer treats as
@@ -243,7 +243,7 @@ referenced and what reconciliation treats as referenced cannot drift apart.
 
 ### Rendering
 
-`src/components/letter-body.tsx` maps nodes onto `<p>`, `<strong>`, `<em>`, and `<img>` —
+`src/components/letter-body.tsx` maps nodes onto `<p>`, `<strong>`, `<em>`, and `<img>` -
 **React elements only, never `dangerouslySetInnerHTML`**. This is what buys formatting
 without a sanitization burden: user text always lands in a text node, so no parse path can
 turn it into markup. That property must survive future edits to this file.
@@ -264,7 +264,7 @@ is why the renderer produces elements from parsed nodes rather than server-rende
 Mirrors the structure the child-photo design established: the rules are pure and tested,
 the canvas work is a thin untested wrapper.
 
-### `src/lib/letter-image.ts` — pure, tested
+### `src/lib/letter-image.ts` - pure, tested
 
 ```ts
 export const IMAGE_MAX_DIMENSION = 1280;                  // px, long edge
@@ -276,7 +276,7 @@ export const IMAGES_PER_LETTER = 12;
 ```
 
 - `fitDimensions(width, height)` → the target size preserving aspect ratio, long edge
-  capped at 1280. Unlike the avatar's `coverCrop`, there is **no cropping** — a letter
+  capped at 1280. Unlike the avatar's `coverCrop`, there is **no cropping** - a letter
   photo keeps its shape. A source smaller than the cap passes through unscaled rather than
   being upscaled.
 - `downscaleSteps(from, to)` → repeated halving while the source is more than 2× the
@@ -284,7 +284,7 @@ export const IMAGES_PER_LETTER = 12;
 - `validateUpload({ mimeType, bytes })` → `ok` or an error code.
 
 1280px is chosen against the render box: letter content is ~640px wide at most, so 1280
-covers a 2× retina display exactly and stores nothing the UI can show. Expect 150–350 KB
+covers a 2× retina display exactly and stores nothing the UI can show. Expect 150-350 KB
 per photo.
 
 Error codes, not copy: `IMAGE_NOT_AN_IMAGE`, `IMAGE_MALFORMED`, `IMAGE_TOO_LARGE`,
@@ -296,7 +296,7 @@ different moments: `IMAGE_NOT_PRO` (here) rejects an *upload* by a non-Pro user,
 `SEND_IMAGES_NOT_ALLOWED` (in `letter-input.ts`) blocks *sealing* a letter that already
 contains images. They are never interchangeable.
 
-### `src/components/letter-image-input.tsx` — client, untested
+### `src/components/letter-image-input.tsx` - client, untested
 
 Given a `File`: reject over `IMAGE_MAX_UPLOAD_BYTES` before decoding; decode with
 `createImageBitmap(file, { imageOrientation: "from-image" })` so EXIF rotation is applied
@@ -320,7 +320,7 @@ The textarea stays. A photo strip sits beneath it.
 
 On pick: compress, call `uploadLetterImage`, receive `{ id, width, height }`, and insert
 `[[img:<id>]]` on its own line at the cursor. Removing an image means deleting its marker
-text — the strip's thumbnail disappears on the next save.
+text - the strip's thumbnail disappears on the next save.
 
 The marker is visible in the textarea. That is the accepted cost of keeping a plain
 textarea instead of a contenteditable surface: no cursor management, no selection bugs, no
@@ -341,14 +341,14 @@ design below handles.
 Blobs are never deleted implicitly. Four paths, covering every way an image can become
 unreferenced.
 
-### 1. Reconciliation on save — the common case
+### 1. Reconciliation on save - the common case
 
 Every draft save and every seal parses the submitted body with `letterImageIds`, compares
 it against the `LetterImage` rows for that letter, and for each row not referenced: `del()`
 the blob, then delete the row. Uploads from this session with no letter yet are claimed by
 setting `letterId` on first save.
 
-This is exact rather than heuristic — the body is the authority on what is referenced — and
+This is exact rather than heuristic - the body is the authority on what is referenced - and
 it covers both "the author removed a marker" and "the author uploaded then changed their
 mind mid-edit".
 
@@ -358,23 +358,23 @@ Sealing reconciles once, then the letter's images are frozen with it. **No later
 cleanup path may touch a `SENT` letter's images**, or a child could open a bottle with
 missing photographs. Every cleanup query below therefore excludes sealed letters.
 
-### 3. Lazy orphan sweep — the tab that was never saved
+### 3. Lazy orphan sweep - the tab that was never saved
 
 If a parent picks a photo and closes the tab, reconciliation never runs and the row keeps
 `letterId: null`. When an author next loads their letters list, a bounded query deletes
 their own `LetterImage` rows with `letterId: null` and `createdAt` older than 24 hours,
 blob first, then row.
 
-The window is deliberately generous — a parent may leave a half-written letter open
+The window is deliberately generous - a parent may leave a half-written letter open
 overnight. Nothing is user-visible during it and the blob is private and unreferenced, so
 the exposure is bytes at rest, not access. No cron job and no scheduled function; the
 sweep rides on a page load that already queries this author's letters.
 
 ### 4. Deletion of letters and children
 
-- **`deleteLetter`** (drafts only) — collect the draft's image pathnames, delete the blobs,
+- **`deleteLetter`** (drafts only) - collect the draft's image pathnames, delete the blobs,
   then delete the letter.
-- **`deleteChild`** — already transactionally deletes every letter written to that child,
+- **`deleteChild`** - already transactionally deletes every letter written to that child,
   drafts and sealed alike, from every co-parent. It must now also delete those letters'
   blobs. Without this, personal photographs of a child would outlive an explicit "delete
   this child" action, which would be the most serious leak this feature could introduce.
@@ -390,21 +390,21 @@ leaking one is neither.
 Per the project's philosophy, the pure libs are tested and nothing requiring a session, a
 database, or a DOM is:
 
-- **`letter-body.test.ts`** — paragraph splitting; bold, italic, and nesting; a marker on
+- **`letter-body.test.ts`** - paragraph splitting; bold, italic, and nesting; a marker on
   its own line; a marker with surrounding text (stays literal); unmatched `**`; an empty
   body; `letterImageIds` returning ids in order and de-duplicating.
-- **`letter-image.test.ts`** — `fitDimensions` for landscape, portrait, square, and a
+- **`letter-image.test.ts`** - `fitDimensions` for landscape, portrait, square, and a
   source under the cap; `downscaleSteps` for a huge source, one just over 2×, and one at
   target; `validateUpload` for each allowed MIME type, a disallowed one, and sizes either
   side of the cap.
-- **`subscription.test.ts`** — `null`, `""`, `"PRO"`, an unknown tier, and a lowercase
+- **`subscription.test.ts`** - `null`, `""`, `"PRO"`, an unknown tier, and a lowercase
   `"pro"` (which must not pass).
-- **`letter-input.test.ts`** — gains the lapsed-Pro cases: sealing with images while not
+- **`letter-input.test.ts`** - gains the lapsed-Pro cases: sealing with images while not
   Pro fails with `SEND_IMAGES_NOT_ALLOWED`; saving a draft in the same state succeeds;
   sealing with images while Pro succeeds; sealing without images while not Pro succeeds.
 
 The route handler, the canvas wrapper, the photo strip, and the renderer component are
-untested — they need a request, a DOM, or both, which per the project's smell test means
+untested - they need a request, a DOM, or both, which per the project's smell test means
 the rules belong in the libs, and they do.
 
 ## Planned follow-up: removing co-parent sharing
@@ -419,7 +419,7 @@ This design does not depend on that removal, and does not block on it. When shar
 
 - Authorization case 2 in `/api/letter-image/[id]` (the co-parent branch) is deleted
   outright, and `canAccessChild` collapses to an owner check.
-- `deleteChild`'s blob sweep gets simpler — every letter to the child belongs to its owner,
+- `deleteChild`'s blob sweep gets simpler - every letter to the child belongs to its owner,
   so there is no cross-author case to reason about.
 
 Nothing in this feature should be built to make sharing easier to keep.

@@ -21,7 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   events: {
     // Lifetime-Pro promotion. While the flag is on, a brand-new user is granted
-    // the PRO tier the moment their account is created — the adapter has already
+    // the PRO tier the moment their account is created - the adapter has already
     // inserted the row with a null subscription, so we promote it here. The flag
     // fails closed, so if it can't be proven on, the signup stays free. This only
     // ever grants Pro; it never revokes it, so turning the flag off later leaves

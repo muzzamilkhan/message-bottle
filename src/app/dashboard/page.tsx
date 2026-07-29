@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/letters";
 import { getAccessibleChildren } from "@/lib/children";
 import { sweepOrphanedImages } from "@/lib/letter-images";
 import { decryptLetterField } from "@/lib/letter-crypto-key";
+import { canUploadImages } from "@/lib/subscription";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -17,7 +18,7 @@ export default async function Dashboard() {
   // that already queries this author's letters.
   await sweepOrphanedImages(session.user.id);
 
-  const [sentCount, drafts, children] = await Promise.all([
+  const [sentCount, drafts, children, author] = await Promise.all([
     prisma.letter.count({
       where: { authorId: session.user.id, status: "SENT" },
     }),
@@ -27,11 +28,19 @@ export default async function Dashboard() {
       include: { child: { select: { avatar: true } } },
     }),
     getAccessibleChildren(session.user.id),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { subscription: true },
+    }),
   ]);
 
   return (
     <>
-      <Header userName={session.user.name} />
+      <Header
+        userName={session.user.name}
+        userImage={session.user.image}
+        isPro={canUploadImages(author?.subscription)}
+      />
       <main className="mx-auto max-w-4xl px-6 py-10">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -41,7 +50,7 @@ export default async function Dashboard() {
             <p className="text-sea-600">
               {sentCount > 0
                 ? `${sentCount} message${sentCount > 1 ? "s" : ""} sealed and set adrift.`
-                : "No messages sent yet — write your first one!"}
+                : "No messages sent yet - write your first one!"}
             </p>
           </div>
           <Link href="/letters/new" className="btn-primary">
@@ -49,7 +58,7 @@ export default async function Dashboard() {
           </Link>
         </div>
 
-        {/* Kid avatars — the quickest way to start a letter. Tapping one opens a
+        {/* Kid avatars - the quickest way to start a letter. Tapping one opens a
             new letter already addressed to that child. Wraps to more rows when a
             parent has lots of kids. */}
         <div className="card mb-8">
@@ -82,7 +91,7 @@ export default async function Dashboard() {
           )}
         </div>
 
-        {/* Sent messages are sealed forever, so we only ever surface a count —
+        {/* Sent messages are sealed forever, so we only ever surface a count -
             there's nothing left to open on this side of the tide. */}
         <div className="card mb-8 flex items-center gap-4">
           <span className="text-4xl">🍾</span>
@@ -90,7 +99,7 @@ export default async function Dashboard() {
             <p className="text-2xl font-extrabold text-sea-800">{sentCount}</p>
             <p className="text-sm text-sea-600">
               message{sentCount === 1 ? "" : "s"} sent. Once sealed, a bottle
-              can&apos;t be viewed, edited, or deleted — it&apos;s on its way to
+              can&apos;t be viewed, edited, or deleted - it&apos;s on its way to
               your child.
             </p>
           </div>

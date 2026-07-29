@@ -46,7 +46,7 @@
 
 /* Safari (iOS + macOS) ignores width/max-width on native date & number inputs
    until their default appearance is reset, so the birthday field spills past
-   its card. Scope this to date/number only — selects keep their native arrow.
+   its card. Scope this to date/number only - selects keep their native arrow.
    The native picker still opens on tap; padding above supplies the height. */
 input[type="date"].field-input,
 input[type="number"].field-input {

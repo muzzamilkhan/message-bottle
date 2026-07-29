@@ -51,8 +51,8 @@ export function LetterStack({
   const done = index >= total;
 
   // Re-trigger the unravel every time the top letter changes (and on first
-  // mount). The same DOM node is reused as cards shuffle forward — so its
-  // photos aren't re-fetched — which means a CSS animation won't replay on its
+  // mount). The same DOM node is reused as cards shuffle forward - so its
+  // photos aren't re-fetched - which means a CSS animation won't replay on its
   // own; removing the class, forcing a reflow, then re-adding it restarts it.
   // useLayoutEffect so the rolled-up first frame paints before the browser
   // ever shows the open card.
@@ -92,7 +92,7 @@ export function LetterStack({
     if (shouldAdvance(drag)) {
       advance(swipeDirection(drag));
     } else {
-      // Not far enough — spring back to center.
+      // Not far enough - spring back to center.
       setDrag(0);
     }
   }
@@ -139,7 +139,7 @@ export function LetterStack({
       </div>
 
       {/* The stack. The top card sits in normal flow so it grows to its full
-          length and scrolls with the page — no cramped inner scrollbar to fight
+          length and scrolls with the page - no cramped inner scrollbar to fight
           the swipe. The cards behind are absolutely positioned to fill it as a
           backdrop. `perspective` gives the swipe-away a real page-flip feel. */}
       <div

@@ -8,7 +8,7 @@ import { decryptLetterField } from "@/lib/letter-crypto-key";
 import { openBottleBypass } from "@/flags";
 
 // The child's self-authenticating open link. The unguessable token in the URL
-// is the credential — no sign-in needed. Bottles stay sealed until the child
+// is the credential - no sign-in needed. Bottles stay sealed until the child
 // reaches the age their parent set (and each letter's own delivery date).
 export const dynamic = "force-dynamic";
 
@@ -48,14 +48,14 @@ export default async function OpenPage({
   // Testing escape hatch: `?test=yes` opens the bottle straight away, ignoring
   // the age-based bottle timer (and each letter's delivery date). It only works
   // when the deployment explicitly opts in by enabling the `open-bottle-bypass`
-  // feature flag — with the flag off, bottles stay sealed until their time.
+  // feature flag - with the flag off, bottles stay sealed until their time.
   const testOverride = test === "yes" && (await openBottleBypass());
 
   const child = await prisma.child.findUnique({
     where: { openToken: token },
     include: {
       letters: {
-        // Only sealed (SENT) letters ever reach the child — drafts stay with
+        // Only sealed (SENT) letters ever reach the child - drafts stay with
         // the parent. Oldest first: the child reads forward through time, one
         // bottle at a time, swiping each away to reach the next.
         where: { status: "SENT" },
@@ -68,7 +68,7 @@ export default async function OpenPage({
     },
   });
 
-  // No child, or the timer was cleared — the link no longer opens anything.
+  // No child, or the timer was cleared - the link no longer opens anything.
   if (!child || !child.birthday || !child.openAtAge) {
     return <NotAvailable />;
   }
@@ -77,7 +77,7 @@ export default async function OpenPage({
   const reached =
     testOverride || hasReachedOpenAge(child.birthday, child.openAtAge);
 
-  // Still counting down — nothing but the sealed collection is shown.
+  // Still counting down - nothing but the sealed collection is shown.
   if (!reached) {
     return (
       <Shell>
@@ -114,7 +114,7 @@ export default async function OpenPage({
           Bottles for {child.name}
         </h1>
         <p className="mt-1 text-sea-600">
-          You&apos;ve reached {child.openAtAge} — the bottles are yours to open. 🎉
+          You&apos;ve reached {child.openAtAge} - the bottles are yours to open. 🎉
         </p>
       </header>
 

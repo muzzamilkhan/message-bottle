@@ -1,6 +1,6 @@
 // The environment-bound half of letter encryption: it resolves the one key
 // from process.env and hands the pure functions in letter-crypto.ts something
-// to work with. Untested by design, like letter-image-store.ts — the rules are
+// to work with. Untested by design, like letter-image-store.ts - the rules are
 // tested there with an injected key; this only reads config.
 //
 // Fail-closed: with no key configured, an encrypted letter can't be read and a
@@ -24,7 +24,7 @@ function letterKey(): Buffer {
   const raw = process.env.LETTER_ENCRYPTION_KEY;
   if (!raw) {
     throw new Error(
-      "LETTER_ENCRYPTION_KEY is not set — letter contents can't be encrypted or decrypted.",
+      "LETTER_ENCRYPTION_KEY is not set - letter contents can't be encrypted or decrypted.",
     );
   }
   cached = keyFromString(raw);

@@ -1,6 +1,6 @@
 // Pure parsing/validation for the child form. Kept free of FormData, Prisma,
-// and sessions so the rules — especially "the bottle timer can never be set in
-// the past" — can be tested with plain values.
+// and sessions so the rules - especially "the bottle timer can never be set in
+// the past" - can be tested with plain values.
 
 // Relative imports (not the `@/` alias) so `node --test` can resolve these
 // without a bundler or path-mapping loader.
@@ -100,7 +100,7 @@ export function parseChildInput(
   const birthdayRaw = raw.birthday.trim();
   const openAtAgeRaw = raw.openAtAge.trim();
 
-  // An unknown or missing avatar silently falls back rather than erroring —
+  // An unknown or missing avatar silently falls back rather than erroring -
   // it's a picker, so a bad value means a stale client, not a user mistake.
   const avatar = (CHILD_AVATARS as readonly string[]).includes(raw.avatar.trim())
     ? raw.avatar.trim()
@@ -116,7 +116,7 @@ export function parseChildInput(
       : "keep";
 
   // What the user just entered, so an error re-render can restore it. The
-  // photo itself never rides along here — it stays in the browser's React
+  // photo itself never rides along here - it stays in the browser's React
   // state across an error re-render, which is why there's no photo field.
   const values: ChildFormValues = {
     name,

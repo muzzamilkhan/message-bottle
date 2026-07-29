@@ -35,7 +35,7 @@ drag-to-reorder, a separate preview tab, and any formatting beyond bold and ital
 
 ## The load-bearing decision: blocks are a view, not a format
 
-`Letter.body` stays a `String` in exactly today's format — paragraphs separated by blank
+`Letter.body` stays a `String` in exactly today's format - paragraphs separated by blank
 lines, `[[img:<id>]]` alone on a line. The block structure exists only inside the editor
 and is serialised back to that string on every change.
 
@@ -61,7 +61,7 @@ export function toBlocks(body: string): LetterBlock[];
 export function toBody(blocks: LetterBlock[]): string;
 ```
 
-`toBlocks` splits the raw body on lines matching `IMAGE_MARKER_PATTERN` — the same exported
+`toBlocks` splits the raw body on lines matching `IMAGE_MARKER_PATTERN` - the same exported
 regex the renderer uses, so there is no second grammar to keep in step. Text between two
 markers becomes one text block **verbatim**, asterisks and blank lines intact.
 
@@ -85,8 +85,8 @@ containing unmatched asterisks.
 The DOM-to-string serialiser, and the security boundary of this feature.
 
 ```ts
-// A minimal structural view of a DOM node, so this is testable in Node —
-// which has no DOMParser — by building plain objects.
+// A minimal structural view of a DOM node, so this is testable in Node -
+// which has no DOMParser - by building plain objects.
 export type RichNode =
   | { type: "text"; text: string }
   | { type: "element"; tag: string; children: RichNode[] };
@@ -105,14 +105,14 @@ The walk is an **allowlist that emits text**, never a blocklist that strips tags
 | `<div>`, `<p>`                    | recurse, then `\n`                        |
 | anything else                     | recurse into children; the element itself is ignored |
 
-The final clause is the whole security story. A pasted `<script>` is not "blacklisted" — it
+The final clause is the whole security story. A pasted `<script>` is not "blacklisted" - it
 is simply not a case the walker handles, so only its text content survives, into a string
 that reaches the child through `parseSpans` as a text node. There is no path from a DOM node
 to stored markup, and `dangerouslySetInnerHTML` remains absent from the codebase. No
 sanitizer library, no blacklist to maintain.
 
 Bold and italic are emitted as `**` and `*` so the existing parser renders them. Text
-containing a literal `*` is not escaped — the parser already treats an unmatched marker as
+containing a literal `*` is not escaped - the parser already treats an unmatched marker as
 a literal character, and escaping would introduce a backslash grammar the renderer doesn't
 know.
 
@@ -124,16 +124,16 @@ input.
 
 Renders the block list and owns the interaction. Composed of:
 
-- **`TextBlock`** — a `contenteditable` div. React sets its `innerHTML` **once on mount**
+- **`TextBlock`** - a `contenteditable` div. React sets its `innerHTML` **once on mount**
   and never again for the lifetime of that block; state flows DOM → React only. This is the
   discipline that prevents React re-renders from resetting the caret, and it is why each
   block is its own component with a stable key.
-- **`PhotoBlock`** — the image at letter width via `letterImageUrl(id)`, with `↑ ↓ ✕`
+- **`PhotoBlock`** - the image at letter width via `letterImageUrl(id)`, with `↑ ↓ ✕`
   controls. Removing a block removes the marker from the saved body, which is what makes
   the blob eligible for deletion through the reconciliation path that already exists.
-- **`SelectionToolbar`** — a small popover with `B` and `I`, positioned above the current
+- **`SelectionToolbar`** - a small popover with `B` and `I`, positioned above the current
   selection, shown only while a non-empty selection exists inside a text block.
-- **Insertion points** — a thin hover target between blocks offering `+ Photo`. With the
+- **Insertion points** - a thin hover target between blocks offering `+ Photo`. With the
   caret inside a text block, inserting splits that block at the caret; otherwise the photo
   is appended.
 
@@ -146,7 +146,7 @@ Paste is intercepted: `preventDefault()`, then insert `clipboardData.getData("te
 The serialiser would neutralise markup anyway; this keeps the visible document clean too.
 
 Enter inserts a line break within the block. Backspace at the start of a text block does
-nothing when a photo block precedes it — there is no block-merging behaviour, and the photo
+nothing when a photo block precedes it - there is no block-merging behaviour, and the photo
 has its own `✕`.
 
 A text block emptied and blurred is removed, unless it is the only block.
@@ -159,8 +159,8 @@ Holds `blocks: LetterBlock[]`, initialised with `toBlocks(letter?.body ?? "")`, 
 
 ### `src/components/letter-image-input.tsx` (removed)
 
-Its compression and upload logic — `compress`, the size guard, the `uploadLetterImage`
-call — moves verbatim into `useLetterImageUpload` in
+Its compression and upload logic - `compress`, the size guard, the `uploadLetterImage`
+call - moves verbatim into `useLetterImageUpload` in
 `src/components/use-letter-image-upload.ts`, which the block editor calls. The Pro upsell
 branch moves to the editor's `+ Photo` affordance. The button, the caption
 "Photos sit where the marker lands", and the thumbnail strip are deleted: the photo blocks
@@ -183,7 +183,7 @@ The canvas code stays untested for the same reason it is today.
 ## Known gap
 
 There is no separate preview. The block editor is the preview, which holds for photos,
-paragraphs, bold, and italic — everything the grammar can express. It does not reproduce
+paragraphs, bold, and italic - everything the grammar can express. It does not reproduce
 the child's page chrome: the bottle, the fonts, the paper. If that turns out to matter, the
 cheap addition later is rendering `LetterBody` inside the seal-confirmation panel above the
 irreversible button, where the parent is already being asked to be certain.
@@ -193,7 +193,7 @@ irreversible button, where the parent is already being asked to be certain.
 **Contenteditable caret behaviour** is the largest piece of this work and the part most
 likely to need iteration after first use. The mitigations are structural: uncontrolled
 blocks, no block merging, plain-text paste, and a grammar with no nesting beyond bold and
-italic. The constraint — bold, italic, images, nothing else — is what makes it tractable.
+italic. The constraint - bold, italic, images, nothing else - is what makes it tractable.
 
 **`execCommand` deprecation.** Formally deprecated, removed nowhere, and the standard choice
 at this size. If a browser ever drops it, the replacement is a `Range`-based toggle behind

@@ -7,18 +7,24 @@ import { AddChildSection } from "@/components/add-child-section";
 import { ChildCard, type ChildCardData } from "@/components/child-card";
 import { formatDate } from "@/lib/letters";
 import { describeBottleTimer } from "@/lib/age";
+import { canUploadImages } from "@/lib/subscription";
 
 export default async function ChildrenPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
+
+  const author = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscription: true },
+  });
 
   const children = await prisma.child.findMany({
     where: { parentId: session.user.id },
     orderBy: { createdAt: "asc" },
     include: {
       _count: { select: { letters: true } },
-      // Every letter written to this child, drafts and sealed alike — matches
-      // the set `deleteChild` destroys — so the photo total below covers
+      // Every letter written to this child, drafts and sealed alike - matches
+      // the set `deleteChild` destroys - so the photo total below covers
       // exactly what the warning must promise.
       letters: {
         select: { _count: { select: { images: true } } },
@@ -53,7 +59,11 @@ export default async function ChildrenPage() {
 
   return (
     <>
-      <Header userName={session.user.name} />
+      <Header
+        userName={session.user.name}
+        userImage={session.user.image}
+        isPro={canUploadImages(author?.subscription)}
+      />
       <main className="mx-auto max-w-4xl px-6 py-10">
         <Link
           href="/dashboard"
@@ -66,7 +76,7 @@ export default async function ChildrenPage() {
         </h1>
         <p className="mb-6 text-sea-600">
           Add a profile for each child, edit their details anytime, and set a
-          bottle timer — the age when they can open their letters from their own
+          bottle timer - the age when they can open their letters from their own
           private link.
         </p>
 
@@ -81,7 +91,7 @@ export default async function ChildrenPage() {
             </h2>
             {childCards.length === 0 ? (
               <div className="card text-sea-600">
-                Add your first child using the form — they&apos;ll show up here.
+                Add your first child using the form - they&apos;ll show up here.
               </div>
             ) : (
               <ul className="space-y-3">

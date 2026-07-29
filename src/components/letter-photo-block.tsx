@@ -4,7 +4,7 @@ import { letterImageUrl } from "@/lib/letter-image-url";
 import type { DraftImage } from "@/components/use-letter-image-upload";
 
 // A photograph, where the parent placed it. This replaces the [[img:<cuid>]]
-// marker they used to have to place by hand — the photo is the marker now.
+// marker they used to have to place by hand - the photo is the marker now.
 export function LetterPhotoBlock({
   image,
   canMoveUp,
@@ -24,7 +24,7 @@ export function LetterPhotoBlock({
     <div className="group relative my-4">
       {/* Plain <img>, not next/image: the route is authorized per-request and
           returns no-store, so there is nothing for the optimizer to fetch or
-          cache. No token here — this is the author's own view, and the route
+          cache. No token here - this is the author's own view, and the route
           authorizes them by session. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

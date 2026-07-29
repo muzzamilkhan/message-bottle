@@ -10,7 +10,7 @@
 //
 // `boldActive` / `italicActive` come from the real selection (queryCommandState
 // in the editor), not a click-toggle, so the pressed look always matches
-// what's actually formatted — including after Cmd+B or moving the caret in and
+// what's actually formatted - including after Cmd+B or moving the caret in and
 // out of styled text.
 export function LetterFormatToolbar({
   boldActive,
@@ -26,7 +26,7 @@ export function LetterFormatToolbar({
   return (
     // Keeping the selection alive is the whole job of the mousedown handler
     // below. A plain group isn't an interactive role, so jsx-a11y wants the
-    // listener on something focusable — but making this focusable is exactly
+    // listener on something focusable - but making this focusable is exactly
     // what would steal the selection, so the rule doesn't apply here.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div

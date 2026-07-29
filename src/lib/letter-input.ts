@@ -31,7 +31,7 @@ export type LetterImageContext = {
   mayHoldImages: boolean;
   // How many distinct images the submitted body references. The cap lives here
   // rather than in reconciliation so an over-cap body is *rejected*, never
-  // quietly trimmed — trimming would leave the extra markers in the text while
+  // quietly trimmed - trimming would leave the extra markers in the text while
   // reconciliation deleted their blobs and rows as unreferenced, losing a
   // photograph for good.
   imageCount: number;
@@ -50,7 +50,7 @@ export function letterInputMessage(error: LetterInputError): string {
   }
 }
 
-// Anything other than an explicit "submit" is treated as saving a draft — the
+// Anything other than an explicit "submit" is treated as saving a draft - the
 // safe direction, since a draft stays editable.
 export function parseLetterIntent(raw: string): LetterIntent {
   return raw.trim() === "submit" ? "submit" : "draft";
@@ -70,7 +70,7 @@ export function parseLetterInput(
   // message, not just a title.
   if (sealing) {
     if (!title || !childId || !body) return { ok: false, error: "SEND_INCOMPLETE" };
-    // A subscription that lapsed mid-draft blocks sealing, not saving — the
+    // A subscription that lapsed mid-draft blocks sealing, not saving - the
     // parent keeps their words and chooses whether to drop the photos or renew.
     if (context.hasImages && !context.mayHoldImages) {
       return { ok: false, error: "SEND_IMAGES_NOT_ALLOWED" };

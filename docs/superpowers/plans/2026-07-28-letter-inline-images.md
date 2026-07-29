@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - **Privacy is the point of this feature.** These are photographs of children. Any change that could expose one to someone unauthorized is a defect, not a trade-off.
-- **The blob store must be created with `access: "private"`.** The mode is fixed at store creation and cannot be changed afterward — a public store can only be fixed by creating a new one.
+- **The blob store must be created with `access: "private"`.** The mode is fixed at store creation and cannot be changed afterward - a public store can only be fixed by creating a new one.
 - **Never render letter body content with `dangerouslySetInnerHTML`.** The renderer emits React elements only. This is what keeps the feature free of a sanitization surface.
 - **Reading an image is never gated on subscription.** Only uploading and sealing are.
 - **A `SENT` letter's images are frozen.** No cleanup path may ever delete an image belonging to a sealed letter.
@@ -24,30 +24,30 @@
 - Pure libs take an **injectable clock** (`now`/`at` defaulting to `new Date()`).
 - Components take children-of-a-parent as **`childOptions`**, never a `children` prop.
 - **Never use `git commit --no-verify`.** If the pre-commit hook fails, fix what it caught.
-- Verify with `npm test && npm run typecheck && npm run lint`. **Never** `npm run build` — it runs `prisma db push --accept-data-loss` against the live database.
+- Verify with `npm test && npm run typecheck && npm run lint`. **Never** `npm run build` - it runs `prisma db push --accept-data-loss` against the live database.
 - Do not start a dev server; one is already running on :3000 (see `dev.log`).
 
 ## File Structure
 
 **Pure libs (tested):**
-- `src/lib/subscription.ts` — the Pro allow-list and `canUploadImages`.
-- `src/lib/letter-body.ts` — the body grammar: parse to nodes, extract image ids.
-- `src/lib/letter-image.ts` — image geometry, size/type validation, error copy.
-- `src/lib/letter-input.ts` *(modify)* — gains the lapsed-Pro seal rule.
+- `src/lib/subscription.ts` - the Pro allow-list and `canUploadImages`.
+- `src/lib/letter-body.ts` - the body grammar: parse to nodes, extract image ids.
+- `src/lib/letter-image.ts` - image geometry, size/type validation, error copy.
+- `src/lib/letter-input.ts` *(modify)* - gains the lapsed-Pro seal rule.
 
 **Infrastructure (untested):**
-- `prisma/schema.prisma` *(modify)* — `LetterImage` model, `User.subscription`.
-- `src/lib/letter-image-store.ts` — the only module that talks to `@vercel/blob`.
+- `prisma/schema.prisma` *(modify)* - `LetterImage` model, `User.subscription`.
+- `src/lib/letter-image-store.ts` - the only module that talks to `@vercel/blob`.
 
 **Server (untested):**
-- `src/app/api/letter-image/[id]/route.ts` — the single authorized read path.
-- `src/app/actions.ts` *(modify)* — upload action, reconciliation, cleanup.
+- `src/app/api/letter-image/[id]/route.ts` - the single authorized read path.
+- `src/app/actions.ts` *(modify)* - upload action, reconciliation, cleanup.
 
 **Client (untested):**
-- `src/components/letter-body.tsx` — node renderer.
-- `src/components/letter-image-input.tsx` — canvas compression + upload + strip.
-- `src/components/letter-form.tsx` *(modify)* — hosts the photo strip.
-- `src/components/letter-stack.tsx` *(modify)* — renders nodes instead of raw text.
+- `src/components/letter-body.tsx` - node renderer.
+- `src/components/letter-image-input.tsx` - canvas compression + upload + strip.
+- `src/components/letter-form.tsx` *(modify)* - hosts the photo strip.
+- `src/components/letter-stack.tsx` *(modify)* - renders nodes instead of raw text.
 
 ---
 
@@ -104,15 +104,15 @@ describe("canUploadImages", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test src/lib/subscription.test.ts`
-Expected: FAIL — cannot find module `./subscription.ts`.
+Expected: FAIL - cannot find module `./subscription.ts`.
 
 - [ ] **Step 3: Write the implementation**
 
 Create `src/lib/subscription.ts`:
 
 ```ts
-// Which subscription tiers may use paid features. Billing doesn't exist yet —
-// User.subscription is set by hand — so this is the whole entitlement story.
+// Which subscription tiers may use paid features. Billing doesn't exist yet -
+// User.subscription is set by hand - so this is the whole entitlement story.
 
 // Tiers allowed to upload inline letter images. Membership, not equality, so
 // adding a tier later means adding a string here and nothing else.
@@ -338,15 +338,15 @@ describe("imageMarker", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test src/lib/letter-body.test.ts`
-Expected: FAIL — cannot find module `./letter-body.ts`.
+Expected: FAIL - cannot find module `./letter-body.ts`.
 
 - [ ] **Step 3: Write the implementation**
 
 Create `src/lib/letter-body.ts`:
 
 ```ts
-// The letter body grammar. A body is a plain string — the column is unchanged
-// and no letter needed migrating — carrying a deliberately tiny subset of
+// The letter body grammar. A body is a plain string - the column is unchanged
+// and no letter needed migrating - carrying a deliberately tiny subset of
 // Markdown plus image markers.
 //
 // This parser produces nodes, and src/components/letter-body.tsx turns those
@@ -360,7 +360,7 @@ export type LetterNode =
   | { kind: "paragraph"; spans: Span[] }
   | { kind: "image"; id: string };
 
-// An image reference. Only ever a whole line — prose that happens to mention a
+// An image reference. Only ever a whole line - prose that happens to mention a
 // marker stays prose. Ids are cuids, so letters and digits.
 export const IMAGE_MARKER_PATTERN = /^\[\[img:([A-Za-z0-9]+)\]\]$/;
 
@@ -450,7 +450,7 @@ export function parseLetterBody(body: string): LetterNode[] {
 // Every image id the body references, in order, without repeats.
 //
 // Cleanup uses this to decide what is still referenced, and the renderer uses
-// the same parser to decide what to show — so the two can never disagree about
+// the same parser to decide what to show - so the two can never disagree about
 // which images a letter contains.
 export function letterImageIds(body: string): string[] {
   const ids = parseLetterBody(body)
@@ -644,7 +644,7 @@ describe("letterImageMessage", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test src/lib/letter-image.test.ts`
-Expected: FAIL — cannot find module `./letter-image.ts`.
+Expected: FAIL - cannot find module `./letter-image.ts`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -684,7 +684,7 @@ export const IMAGE_QUALITY_LADDER = [0.82, 0.7, 0.6] as const;
 export const IMAGES_PER_LETTER = 12;
 
 // The stored size for a source image: aspect ratio preserved, long edge capped.
-// A source already within the cap is left alone rather than upscaled — there is
+// A source already within the cap is left alone rather than upscaled - there is
 // no detail to invent, and storing it as-is keeps it sharp.
 export function fitDimensions(
   width: number,
@@ -756,7 +756,7 @@ export function letterImageMessage(error: LetterImageError): string {
 // Validate what the browser uploaded.
 //
 // The client downscales and compresses before sending, but that's a UX
-// convenience and never a trust boundary — anyone can POST to a server action,
+// convenience and never a trust boundary - anyone can POST to a server action,
 // so every one of these checks has to hold here on its own.
 export function validateUpload(input: {
   mimeType: string;
@@ -802,13 +802,13 @@ git commit -m "Add geometry and validation for inline letter images"
 
 **Files:**
 - Modify: `src/lib/letter-input.ts`
-- Test: `src/lib/letter-input.test.ts` (existing — add cases)
+- Test: `src/lib/letter-input.test.ts` (existing - add cases)
 
 **Interfaces:**
 - Consumes: nothing.
 - Produces: `parseLetterInput` gains a third parameter `context: { hasImages: boolean; mayHoldImages: boolean }`; `LetterInputError` gains `"SEND_IMAGES_NOT_ALLOWED"`.
 
-**Context:** `parseLetterInput(raw, intent)` currently takes two arguments and is called once, in `saveLetter` in `src/app/actions.ts`. Adding a required third parameter is deliberate — it makes every call site state the entitlement rather than defaulting to permissive.
+**Context:** `parseLetterInput(raw, intent)` currently takes two arguments and is called once, in `saveLetter` in `src/app/actions.ts`. Adding a required third parameter is deliberate - it makes every call site state the entitlement rather than defaulting to permissive.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -861,7 +861,7 @@ describe("images and sealing", () => {
     assert.equal(result.ok, true);
   });
 
-  // An incomplete letter is incomplete first — reporting the image problem
+  // An incomplete letter is incomplete first - reporting the image problem
   // would send the parent looking for photos in an empty letter.
   it("reports incompleteness before the image rule", () => {
     const result = parseLetterInput({ ...complete, body: "" }, "submit", {
@@ -878,7 +878,7 @@ Also extend the existing `letterInputMessage` "returns a message for every error
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test src/lib/letter-input.test.ts`
-Expected: FAIL — the new suite gets `ok: true` where it expects `SEND_IMAGES_NOT_ALLOWED`, and typecheck complains about the third argument.
+Expected: FAIL - the new suite gets `ok: true` where it expects `SEND_IMAGES_NOT_ALLOWED`, and typecheck complains about the third argument.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -924,7 +924,7 @@ export function parseLetterInput(
   // message, not just a title.
   if (sealing) {
     if (!title || !childId || !body) return { ok: false, error: "SEND_INCOMPLETE" };
-    // A subscription that lapsed mid-draft blocks sealing, not saving — the
+    // A subscription that lapsed mid-draft blocks sealing, not saving - the
     // parent keeps their words and chooses whether to drop the photos or renew.
     if (context.hasImages && !context.mayHoldImages) {
       return { ok: false, error: "SEND_IMAGES_NOT_ALLOWED" };
@@ -942,11 +942,11 @@ export function parseLetterInput(
 Run: `node --test src/lib/letter-input.test.ts`
 Expected: PASS, all tests.
 
-Note: `npm run typecheck` will now fail on `src/app/actions.ts`, which still calls `parseLetterInput` with two arguments. **Do not** paper over this with a hardcoded permissive placeholder — a commit containing `mayHoldImages: true` is a hardcoded auth bypass, however briefly it lives.
+Note: `npm run typecheck` will now fail on `src/app/actions.ts`, which still calls `parseLetterInput` with two arguments. **Do not** paper over this with a hardcoded permissive placeholder - a commit containing `mayHoldImages: true` is a hardcoded auth bypass, however briefly it lives.
 
 The real call site needs `User.subscription`, which Task 5 adds. So the call-site update is deferred to Task 5 Step 3a, and **this task's commit is expected to leave typecheck failing on that one call**. That is the deliberate cost of not committing a permissive default.
 
-Commit this task with `npm test` green and note the known typecheck failure in your report. The pre-commit hook runs typecheck and will block the commit — so commit the lib and its tests together with the call-site fix in Task 5 instead. Concretely: **do not commit at the end of this task.** Leave the working tree dirty, report DONE_WITH_CONCERNS naming the pending call site, and Task 5 makes the single green commit covering both.
+Commit this task with `npm test` green and note the known typecheck failure in your report. The pre-commit hook runs typecheck and will block the commit - so commit the lib and its tests together with the call-site fix in Task 5 instead. Concretely: **do not commit at the end of this task.** Leave the working tree dirty, report DONE_WITH_CONCERNS naming the pending call site, and Task 5 makes the single green commit covering both.
 
 - [ ] **Step 5: Verify tests, and stop without committing**
 
@@ -954,7 +954,7 @@ Run: `npm test`
 Expected: all pass, including the new cases.
 
 Run: `npm run typecheck`
-Expected: **one failure** in `src/app/actions.ts` — `parseLetterInput` called with 2 arguments, 3 expected. This is the known, deliberate state described in Step 4.
+Expected: **one failure** in `src/app/actions.ts` - `parseLetterInput` called with 2 arguments, 3 expected. This is the known, deliberate state described in Step 4.
 
 Do not commit. Do not add a placeholder argument to silence it. Leave the working tree dirty and report `DONE_WITH_CONCERNS`, naming the failing call site. Task 5 commits this work together with the real call-site fix.
 
@@ -994,7 +994,7 @@ On Vercel, Functions authenticate with a short-lived auto-rotating OIDC token sc
 Record the requirement in `.env.example`:
 
 ```
-# Vercel Blob. The store MUST be created with private access — the mode is
+# Vercel Blob. The store MUST be created with private access - the mode is
 # fixed at creation and cannot be changed. Local development only; on Vercel,
 # Functions authenticate with a short-lived OIDC token instead.
 BLOB_READ_WRITE_TOKEN=
@@ -1006,7 +1006,7 @@ In `prisma/schema.prisma`, add to `model User`:
 
 ```prisma
   // Subscription tier. Null means free. Read through canUploadImages in
-  // src/lib/subscription.ts — never compared directly — so adding a tier is a
+  // src/lib/subscription.ts - never compared directly - so adding a tier is a
   // one-line change there. Set by hand until billing exists.
   subscription String?
   letterImages LetterImage[]
@@ -1026,7 +1026,7 @@ Add the model:
 // ever served through /api/letter-image/[id], which authorizes every request.
 model LetterImage {
   id       String @id @default(cuid())
-  // Pathname in the private blob store. Never a public URL — a private store
+  // Pathname in the private blob store. Never a public URL - a private store
   // is unreadable by URL at all, which is the point.
   pathname String @unique
   // The stored size, so the renderer can reserve the aspect box before the
@@ -1037,7 +1037,7 @@ model LetterImage {
   mimeType String
   // Null while the image belongs to a new letter that hasn't been saved yet.
   // Set on the letter's first save. Cascade removes the row with the letter,
-  // but NOT the blob — blob deletion is always explicit.
+  // but NOT the blob - blob deletion is always explicit.
   letter   Letter? @relation(fields: [letterId], references: [id], onDelete: Cascade)
   letterId String?
   // The uploader. Both the upload gate and the orphan sweep hang off this.
@@ -1055,7 +1055,7 @@ model LetterImage {
 - [ ] **Step 4: Apply the schema**
 
 Run: `npm run db:push`
-Expected: the two models sync. Both changes are additive — existing letters have no images and every existing user is free — so there is no backfill.
+Expected: the two models sync. Both changes are additive - existing letters have no images and every existing user is free - so there is no backfill.
 
 - [ ] **Step 4a: Wire the real entitlement into `saveLetter`**
 
@@ -1093,7 +1093,7 @@ Task 7 adds reconciliation to this same function but does not change this call.
 
 - [ ] **Step 4b: Raise the server action body limit**
 
-A compressed image can reach 600 KB, and Next's server actions default to a 1 MB body — too close for comfort once form fields are added. In `next.config.ts` (or `.mjs`), set:
+A compressed image can reach 600 KB, and Next's server actions default to a 1 MB body - too close for comfort once form fields are added. In `next.config.ts` (or `.mjs`), set:
 
 ```ts
   experimental: {
@@ -1120,7 +1120,7 @@ Create `src/lib/letter-image-store.ts`:
 // to a byte is through a Function that authorized the request first, which is
 // src/app/api/letter-image/[id]/route.ts.
 //
-// Untested by design — it is a thin wrapper over a network service, and the
+// Untested by design - it is a thin wrapper over a network service, and the
 // rules worth testing live in letter-image.ts.
 
 import { del, get, put } from "@vercel/blob";
@@ -1180,7 +1180,7 @@ Add to the Architecture section, after "The two invariants":
 ### Inline letter images
 
 Letter bodies may contain `[[img:<id>]]` markers referencing `LetterImage` rows. The bytes
-live in a **private** Vercel Blob store — unreadable by URL — and are served only by
+live in a **private** Vercel Blob store - unreadable by URL - and are served only by
 `/api/letter-image/[id]`, which authorizes every request as the author, a co-parent with
 access to the child, or the child themselves via `openToken` **after the age gate passes**.
 The time lock covers photos exactly as it covers text.
@@ -1189,8 +1189,8 @@ Uploading is gated on `User.subscription` through `canUploadImages`; **reading n
 because the child has no account and a sealed letter must keep its photos forever.
 
 Blob deletion is never automatic. `onDelete: Cascade` removes `LetterImage` rows with their
-letter but leaves the bytes, so every path that deletes letters — `deleteLetter`,
-`deleteChild`, save-time reconciliation, and the orphan sweep — must delete blobs
+letter but leaves the bytes, so every path that deletes letters - `deleteLetter`,
+`deleteChild`, save-time reconciliation, and the orphan sweep - must delete blobs
 explicitly, **blobs first, then rows**.
 ```
 
@@ -1322,7 +1322,7 @@ async function isAuthorized(
 //
 // The rule is that the server never ships letter content before the age gate,
 // and an inline photograph is letter content. /open/[token] already refuses to
-// render bodies while locked, but this route is directly addressable — so it
+// render bodies while locked, but this route is directly addressable - so it
 // has to check for itself, and it never trusts a client-supplied claim about
 // age or unlock state.
 function childMayRead(request: Request, image: ImageRecord): boolean {
@@ -1359,12 +1359,12 @@ Expected: both pass.
 
 - [ ] **Step 3: Verify the authorization by reading it against the four cases**
 
-No automated test — this needs a session, a database, and a request, which per the project's testing philosophy means it isn't unit-tested. Confirm by reading:
+No automated test - this needs a session, a database, and a request, which per the project's testing philosophy means it isn't unit-tested. Confirm by reading:
 
 1. The author of the image gets bytes.
 2. A signed-in co-parent with `canAccessChild` gets bytes.
 3. A request with a correct `?t=` gets bytes **only if** the letter is `SENT` **and** `hasReachedOpenAge` passes (or the `TESTING` bypass is active).
-4. Everything else — no session, wrong token, right token but locked, right token but a draft — gets 404.
+4. Everything else - no session, wrong token, right token but locked, right token but a draft - gets 404.
 
 - [ ] **Step 4: Commit**
 
@@ -1386,7 +1386,7 @@ git commit -m "Serve letter images only through an authorized, age-gated route"
 
 - [ ] **Step 1: Add the upload action**
 
-In `src/app/actions.ts`, add these imports. `canUploadImages` and `letterImageIds` are already imported by Task 5 — don't duplicate them.
+In `src/app/actions.ts`, add these imports. `canUploadImages` and `letterImageIds` are already imported by Task 5 - don't duplicate them.
 
 ```ts
 import {
@@ -1413,7 +1413,7 @@ export type LetterImageState = {
 // body as a [[img:<id>]] marker.
 //
 // Uploading is the Pro-gated half of this feature. The button is hidden for
-// free users, but that is UX — this check is the boundary, because anyone can
+// free users, but that is UX - this check is the boundary, because anyone can
 // POST to a server action.
 export async function uploadLetterImage(
   _prev: LetterImageState,
@@ -1451,7 +1451,7 @@ export async function uploadLetterImage(
   if (!check.ok) return { error: letterImageMessage(check.error) };
 
   // A letter id is present when editing a saved draft, absent for a letter
-  // that hasn't been saved yet — those rows start unattached and are claimed
+  // that hasn't been saved yet - those rows start unattached and are claimed
   // on first save.
   const letterId = String(formData.get("letterId") ?? "").trim();
   let attachedTo: string | null = null;
@@ -1551,7 +1551,7 @@ const ORPHAN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 //
 // Reconciliation handles every image whose letter got saved; this handles the
 // tab that was closed first, where no save ever ran. Rides on a page load that
-// already queries this author's letters — no cron, no scheduled function.
+// already queries this author's letters - no cron, no scheduled function.
 //
 // Only ever touches unattached rows, so a sealed letter's images are out of
 // reach by construction.
@@ -1624,11 +1624,11 @@ Replace the body of `deleteLetter` after the id check:
 
 - [ ] **Step 5: Delete blobs in `deleteChild`**
 
-In `deleteChild`, replace the transaction with a blob-deleting version. Without this, photographs of a child outlive an explicit "delete this child" — the most serious leak this feature could introduce.
+In `deleteChild`, replace the transaction with a blob-deleting version. Without this, photographs of a child outlive an explicit "delete this child" - the most serious leak this feature could introduce.
 
 ```ts
   // Every letter written to this child, from every co-parent, drafts and
-  // sealed alike — and the photos inside them.
+  // sealed alike - and the photos inside them.
   const images = await prisma.letterImage.findMany({
     where: { letter: { childId: child.id } },
     select: { pathname: true },
@@ -1719,8 +1719,8 @@ export function LetterBody({
       {nodes.map((node, index) => {
         if (node.kind === "image") {
           const image = byId.get(node.id);
-          // A marker with no matching image — a hand-edited body, or an image
-          // deleted from under it — is skipped rather than breaking the page.
+          // A marker with no matching image - a hand-edited body, or an image
+          // deleted from under it - is skipped rather than breaking the page.
           if (!image) return null;
           return (
             <LetterImage key={`${node.id}-${index}`} image={image} openToken={openToken} />
@@ -1820,7 +1820,7 @@ Replace the raw body render at line 174 (`{letter.body}`) with:
         />
 ```
 
-If the surrounding element carries a `whitespace-pre-wrap` class, remove it — the renderer now emits paragraphs and sets that itself.
+If the surrounding element carries a `whitespace-pre-wrap` class, remove it - the renderer now emits paragraphs and sets that itself.
 
 - [ ] **Step 3: Pass images and the token from the open page**
 
@@ -1907,7 +1907,7 @@ async function compress(
   file: File,
 ): Promise<{ blob: Blob; width: number; height: number }> {
   // Applies the EXIF rotation flag, so phone photos aren't stored sideways.
-  // That's the whole EXIF story — and re-encoding through a canvas drops the
+  // That's the whole EXIF story - and re-encoding through a canvas drops the
   // rest of the metadata, including GPS coordinates, which is exactly what we
   // want for a photo of a child.
   const bitmap = await createImageBitmap(file, {
@@ -1957,7 +1957,7 @@ export function LetterImageInput({
 }: {
   letterId?: string;
   // Whether this author's subscription covers uploading. The server checks
-  // again — this only decides what the form offers.
+  // again - this only decides what the form offers.
   canUpload: boolean;
   // The current body, so the strip can count what's already referenced.
   body: string;
@@ -2058,7 +2058,7 @@ export function LetterImageInput({
 }
 ```
 
-`LetterImageState` is imported as a type from the server action module, which is safe — `import type` is erased at build time, so no server code is pulled into the client bundle.
+`LetterImageState` is imported as a type from the server action module, which is safe - `import type` is erased at build time, so no server code is pulled into the client bundle.
 
 - [ ] **Step 2: Host the strip in the letter form**
 
@@ -2183,7 +2183,7 @@ git commit -m "Add the Pro-gated photo strip to the letter editor"
 - Consumes: nothing new. `ChildCard`'s `child` prop gains `photosCount: number`.
 - Produces: nothing later tasks rely on.
 
-Both delete confirmations currently promise that letters go and say nothing about photos. Deleting a child now also destroys photographs from every co-parent's letters — that belongs in the warning the parent reads before confirming, not just in the code.
+Both delete confirmations currently promise that letters go and say nothing about photos. Deleting a child now also destroys photographs from every co-parent's letters - that belongs in the warning the parent reads before confirming, not just in the code.
 
 - [ ] **Step 1: Count photos for the child card**
 
@@ -2289,14 +2289,14 @@ git commit -m "Say that photos are deleted too before deleting a child or draft"
 
 ### Task 11: End-to-end verification
 
-**Files:** none — this task changes nothing and exists to catch what unit tests structurally cannot.
+**Files:** none - this task changes nothing and exists to catch what unit tests structurally cannot.
 
 The privacy behaviour of this feature lives in a route handler, a session, and a database, none of which are unit-tested by design. That makes a manual pass the only place these rules are actually checked.
 
 - [ ] **Step 1: Confirm the checks pass**
 
 Run: `npm test && npm run typecheck && npm run lint`
-Expected: all three pass. Do not run `npm run build` — it pushes schema to the live database.
+Expected: all three pass. Do not run `npm run build` - it pushes schema to the live database.
 
 - [ ] **Step 2: Set up test data**
 
@@ -2312,19 +2312,19 @@ Set `User.subscription` to `PRO` for your signed-in user. Confirm a second user 
 
 1. As the Pro user, start a letter, add a photo, confirm the marker appears at the cursor.
 2. Save the draft. Reopen it. The photo renders.
-3. Delete the marker from the body, save, reopen — the photo is gone from the strip.
+3. Delete the marker from the body, save, reopen - the photo is gone from the strip.
 4. As the non-Pro user, confirm the button reads "· Pro" and reveals the note instead of a file picker.
 
-- [ ] **Step 4: Verify the privacy rules by hand — the point of the feature**
+- [ ] **Step 4: Verify the privacy rules by hand - the point of the feature**
 
 Each of these must hold. Copy an image URL (`/api/letter-image/<id>`) from the editor's rendered photo, then:
 
-1. **Signed out** — open the URL in a private window. Expect **404**.
-2. **Signed in as an unrelated user** — expect **404**.
-3. **The child's link before the age gate** — set a child's `openAtAge` above their current age in Studio, seal a letter with a photo, open `/open/<token>`. The countdown shows and **no image URL appears in the page source**. Fetch the image URL with `?t=<openToken>` directly — expect **404**, because the gate hasn't passed.
-4. **The child's link after the gate** — lower `openAtAge` below their current age. The photo renders on the open page.
-5. **A wrong token** — the correct image id with a made-up `?t=` value. Expect **404**.
-6. **The blob URL itself** — find the image in the Vercel Blob dashboard and open its URL signed out. Expect a denial: the store is private. **If this returns the image, the store was created public** and must be recreated as private.
+1. **Signed out** - open the URL in a private window. Expect **404**.
+2. **Signed in as an unrelated user** - expect **404**.
+3. **The child's link before the age gate** - set a child's `openAtAge` above their current age in Studio, seal a letter with a photo, open `/open/<token>`. The countdown shows and **no image URL appears in the page source**. Fetch the image URL with `?t=<openToken>` directly - expect **404**, because the gate hasn't passed.
+4. **The child's link after the gate** - lower `openAtAge` below their current age. The photo renders on the open page.
+5. **A wrong token** - the correct image id with a made-up `?t=` value. Expect **404**.
+6. **The blob URL itself** - find the image in the Vercel Blob dashboard and open its URL signed out. Expect a denial: the store is private. **If this returns the image, the store was created public** and must be recreated as private.
 
 - [ ] **Step 5: Verify deletion removes bytes, not just rows**
 
@@ -2335,7 +2335,7 @@ Each of these must hold. Copy an image URL (`/api/letter-image/<id>`) from the e
 
 - [ ] **Step 6: Commit any fixes**
 
-If anything failed, fix it and commit. If everything passed, there's nothing to commit — say so explicitly rather than inventing a commit.
+If anything failed, fix it and commit. If everything passed, there's nothing to commit - say so explicitly rather than inventing a commit.
 
 ---
 
@@ -2343,6 +2343,6 @@ If anything failed, fix it and commit. If everything passed, there's nothing to 
 
 **On the two Pro codes.** `IMAGE_NOT_PRO` (in `letter-image.ts`) rejects an *upload*; `SEND_IMAGES_NOT_ALLOWED` (in `letter-input.ts`) blocks *sealing* a letter that already holds images. They belong to different libs and different moments and are never interchangeable.
 
-**On what is not tested, and why.** The route handler, the canvas wrapper, the photo strip, and the renderer need a request, a DOM, or both. The project's rule is that if verifying a rule requires a session, a database, or a rendered DOM, the rule is in the wrong place — so the rules live in `letter-body.ts`, `letter-image.ts`, `subscription.ts`, and `letter-input.ts`, and those are tested hard. Task 10 is what covers the rest; don't skip it.
+**On what is not tested, and why.** The route handler, the canvas wrapper, the photo strip, and the renderer need a request, a DOM, or both. The project's rule is that if verifying a rule requires a session, a database, or a rendered DOM, the rule is in the wrong place - so the rules live in `letter-body.ts`, `letter-image.ts`, `subscription.ts`, and `letter-input.ts`, and those are tested hard. Task 10 is what covers the rest; don't skip it.
 
 **If reconciliation and the sweep ever disagree,** the bug is likely that something stopped using `letterImageIds` as the single source of truth for "what does this body reference". Both paths, and the renderer, must keep going through that one function.

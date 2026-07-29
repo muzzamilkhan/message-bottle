@@ -9,7 +9,7 @@ import { getAccessibleChildren, withoutPhotos } from "@/lib/children";
 import { canUploadImages } from "@/lib/subscription";
 import { decryptLetterField } from "@/lib/letter-crypto-key";
 
-// Only drafts have a page of their own — they're still editable. Sent letters
+// Only drafts have a page of their own - they're still editable. Sent letters
 // are sealed forever and can never be viewed, edited, or deleted by the author.
 export default async function EditDraftPage({
   params,
@@ -51,7 +51,11 @@ export default async function EditDraftPage({
 
   return (
     <>
-      <Header userName={session.user.name} />
+      <Header
+        userName={session.user.name}
+        userImage={session.user.image}
+        isPro={canUploadImages(author?.subscription)}
+      />
       <main className="mx-auto max-w-2xl px-6 py-10">
         <Link
           href="/dashboard"

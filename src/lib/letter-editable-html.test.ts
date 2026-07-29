@@ -10,7 +10,7 @@ describe("toEditableHtml", () => {
   it("does not pair markers across a blank line", () => {
     // These are exactly the paragraph-pairs a text block may hold. A text
     // block is rendered per-paragraph, mirroring parseLetterBody splitting
-    // the body on blank lines before ever calling parseSpans — so a marker
+    // the body on blank lines before ever calling parseSpans - so a marker
     // in one paragraph must never pair with one in another.
     assert.equal(toEditableHtml("5 * 3\n\n2 * 4"), "5 * 3<br><br>2 * 4");
     assert.equal(

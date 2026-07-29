@@ -11,11 +11,11 @@ export const PHOTO_SIZE = 160;
 // overshoots the byte cap at 160px, the only lever left is fewer pixels, so we
 // re-encode at progressively smaller squares down to this floor. 64px still
 // fills the emoji slot on the open page, and a quality-0.6 WebP that small is a
-// tiny fraction of the cap — so we never actually reach the floor, but it
+// tiny fraction of the cap - so we never actually reach the floor, but it
 // guarantees the fallback terminates.
 export const PHOTO_MIN_SIZE = 64;
 
-// Decoded byte cap for a stored photo. Generous for 160px — a quality-0.82
+// Decoded byte cap for a stored photo. Generous for 160px - a quality-0.82
 // WebP at that size lands around 7-9 KB.
 export const PHOTO_MAX_BYTES = 20 * 1024;
 
@@ -74,8 +74,8 @@ export function downscaleSteps(from: number, to: number = PHOTO_SIZE): number[] 
 // Encoding is the only place we learn a photo is too dense to fit, and by then
 // the quality ladder is spent, so the remaining lever is pixels: each rung is
 // ~15% smaller than the last, down to the floor. Starting at `from` means the
-// first rung is the stored size itself — the size the quality ladder already
-// runs at — so a photo that fits there never shrinks further. Paired with the
+// first rung is the stored size itself - the size the quality ladder already
+// runs at - so a photo that fits there never shrinks further. Paired with the
 // quality ladder this makes "too large even after shrinking" unreachable for a
 // real photo.
 export function shrinkLadder(from: number = PHOTO_SIZE): number[] {
@@ -89,7 +89,7 @@ export function shrinkLadder(from: number = PHOTO_SIZE): number[] {
 }
 
 // Why a photo was rejected. Codes rather than copy, so tests assert on rules
-// and wording stays free to change — same convention as child-input.ts.
+// and wording stays free to change - same convention as child-input.ts.
 export type ChildPhotoError =
   | "PHOTO_NOT_AN_IMAGE"
   | "PHOTO_MALFORMED"
@@ -134,7 +134,7 @@ export function parsePhotoDataUrl(input: string): PhotoParseResult {
   if (base64.length % 4 !== 0) return { ok: false, error: "PHOTO_MALFORMED" };
 
   // Derive the decoded length from the encoded length rather than allocating
-  // the buffer — this runs on every submit, and we may be about to reject it.
+  // the buffer - this runs on every submit, and we may be about to reject it.
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
   const bytes = (base64.length / 4) * 3 - padding;
   if (bytes <= 0) return { ok: false, error: "PHOTO_MALFORMED" };

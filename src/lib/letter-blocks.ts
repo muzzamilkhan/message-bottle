@@ -5,7 +5,7 @@
 // behind "delete the child, and every photo goes with it". These blocks exist
 // only inside the editor, and serialisation normalises the body: whitespace
 // between blocks becomes a single blank line, and leading/trailing whitespace
-// goes. What is exactly preserved is what matters — the image markers, in order.
+// goes. What is exactly preserved is what matters - the image markers, in order.
 // letterImageIds() reads the same set back, so reconciliation and the orphan
 // sweep see exactly what they always have. Bodies already written by this
 // editor round-trip byte-identically; normalisation only shows up on a
@@ -20,7 +20,7 @@ export type LetterBlock =
 // Split a stored body into blocks.
 //
 // Deliberately not built on parseLetterBody: that returns styled spans, and
-// re-serialising spans back to **/* would not round-trip — parseSpans treats an
+// re-serialising spans back to **/* would not round-trip - parseSpans treats an
 // unmatched * as a literal character, so re-emitting it would change its
 // meaning on the next parse. Splitting the raw string on the same marker
 // pattern keeps the round-trip exact and leaves one grammar, not two.
