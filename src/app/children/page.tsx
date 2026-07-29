@@ -7,10 +7,16 @@ import { AddChildSection } from "@/components/add-child-section";
 import { ChildCard, type ChildCardData } from "@/components/child-card";
 import { formatDate } from "@/lib/letters";
 import { describeBottleTimer } from "@/lib/age";
+import { canUploadImages } from "@/lib/subscription";
 
 export default async function ChildrenPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
+
+  const author = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscription: true },
+  });
 
   const children = await prisma.child.findMany({
     where: { parentId: session.user.id },
@@ -53,7 +59,11 @@ export default async function ChildrenPage() {
 
   return (
     <>
-      <Header userName={session.user.name} />
+      <Header
+        userName={session.user.name}
+        userImage={session.user.image}
+        isPro={canUploadImages(author?.subscription)}
+      />
       <main className="mx-auto max-w-4xl px-6 py-10">
         <Link
           href="/dashboard"

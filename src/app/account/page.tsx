@@ -35,7 +35,11 @@ export default async function AccountPage() {
 
   return (
     <>
-      <Header userName={session.user.name} />
+      <Header
+        userName={user.name}
+        userImage={user.image}
+        isPro={subscription.isPro}
+      />
       <main className="mx-auto max-w-2xl px-6 py-10">
         <Link
           href="/dashboard"

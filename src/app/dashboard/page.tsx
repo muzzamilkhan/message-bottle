@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/letters";
 import { getAccessibleChildren } from "@/lib/children";
 import { sweepOrphanedImages } from "@/lib/letter-images";
 import { decryptLetterField } from "@/lib/letter-crypto-key";
+import { canUploadImages } from "@/lib/subscription";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -17,7 +18,7 @@ export default async function Dashboard() {
   // that already queries this author's letters.
   await sweepOrphanedImages(session.user.id);
 
-  const [sentCount, drafts, children] = await Promise.all([
+  const [sentCount, drafts, children, author] = await Promise.all([
     prisma.letter.count({
       where: { authorId: session.user.id, status: "SENT" },
     }),
@@ -27,11 +28,19 @@ export default async function Dashboard() {
       include: { child: { select: { avatar: true } } },
     }),
     getAccessibleChildren(session.user.id),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { subscription: true },
+    }),
   ]);
 
   return (
     <>
-      <Header userName={session.user.name} />
+      <Header
+        userName={session.user.name}
+        userImage={session.user.image}
+        isPro={canUploadImages(author?.subscription)}
+      />
       <main className="mx-auto max-w-4xl px-6 py-10">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
