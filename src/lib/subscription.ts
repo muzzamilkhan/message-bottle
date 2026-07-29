@@ -13,3 +13,26 @@ export function canUploadImages(
 ): boolean {
   return (IMAGE_UPLOAD_TIERS as readonly string[]).includes(subscription ?? "");
 }
+
+// How a subscription reads on the account page. Kept pure so the wording is
+// tested here rather than in a rendered component. `isPro` is the same
+// membership test as canUploadImages — a Pro member is exactly one who may
+// upload — so the two can never drift apart.
+export function describeSubscription(subscription: string | null | undefined): {
+  label: string;
+  isPro: boolean;
+  blurb: string;
+} {
+  if (canUploadImages(subscription)) {
+    return {
+      label: "Pro",
+      isPro: true,
+      blurb: "You can add photos to your letters.",
+    };
+  }
+  return {
+    label: "Free",
+    isPro: false,
+    blurb: "Upgrade to Pro to add photos to your letters.",
+  };
+}

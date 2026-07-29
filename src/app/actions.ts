@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   childInputMessage,
@@ -451,6 +451,40 @@ export async function deleteChild(formData: FormData): Promise<void> {
 
   revalidatePath("/children");
   revalidatePath("/dashboard");
+}
+
+// Permanently delete the signed-in user and everything hanging off them. This
+// is the account-closure promise the account page makes: every child, every
+// letter (draft and sealed alike), and every photo inside those letters goes
+// with the account.
+//
+// The database side is a single cascade from the User row — children, letters,
+// letter-image rows, OAuth accounts, and sessions all carry
+// `onDelete: Cascade`. The blob bytes never do (blob deletion is always
+// explicit), so we gather every pathname this author owns and delete those
+// blobs first, then drop the user. A blob failure leaves unreachable bytes
+// (swept later), which is the safe direction; a row-first order could strand a
+// live photo no row points at.
+export async function deleteAccount(): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const userId = session.user.id;
+
+  // Every photo this author ever uploaded, whether attached to a letter or
+  // still unattached — the cascade will take the rows, but never the bytes.
+  const images = await prisma.letterImage.findMany({
+    where: { authorId: userId },
+    select: { pathname: true },
+  });
+  await deleteLetterImages(images.map((image) => image.pathname));
+
+  // Deleting the user cascades to children, letters, letter-image rows,
+  // accounts, and sessions.
+  await prisma.user.delete({ where: { id: userId } });
+
+  // The session row is already gone with the user; sign out to clear the
+  // cookie and land back on the marketing page.
+  await signOut({ redirectTo: "/" });
 }
 
 export async function deleteLetter(formData: FormData): Promise<void> {
