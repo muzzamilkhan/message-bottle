@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { DeleteAccountSection } from "@/components/delete-account-section";
+import { UserAvatar } from "@/components/user-avatar";
 import { formatDate } from "@/lib/letters";
 import { describeSubscription } from "@/lib/subscription";
 
@@ -52,7 +53,15 @@ export default async function AccountPage() {
         <div className="space-y-6">
           {/* Account details */}
           <section className="card space-y-4">
-            <h2 className="text-lg font-bold text-sea-800">Details</h2>
+            <div className="flex items-center gap-4">
+              <UserAvatar
+                name={user.name}
+                image={user.image}
+                isPro={subscription.isPro}
+                size="lg"
+              />
+              <h2 className="text-lg font-bold text-sea-800">Details</h2>
+            </div>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="font-semibold text-sea-600">Name</dt>
