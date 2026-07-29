@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   cardStyle,
   LEAVE_MS,
@@ -43,9 +43,26 @@ export function LetterStack({
   // the next letter takes its place.
   const [leaving, setLeaving] = useState<null | "left" | "right">(null);
   const startX = useRef(0);
+  // The current top card's unravel layer. Each time a new letter reaches the
+  // top we replay the unroll on it.
+  const topRef = useRef<HTMLDivElement | null>(null);
 
   const total = letters.length;
   const done = index >= total;
+
+  // Re-trigger the unravel every time the top letter changes (and on first
+  // mount). The same DOM node is reused as cards shuffle forward — so its
+  // photos aren't re-fetched — which means a CSS animation won't replay on its
+  // own; removing the class, forcing a reflow, then re-adding it restarts it.
+  // useLayoutEffect so the rolled-up first frame paints before the browser
+  // ever shows the open card.
+  useLayoutEffect(() => {
+    const el = topRef.current;
+    if (!el) return;
+    el.classList.remove("animate-unravel");
+    void el.offsetWidth;
+    el.classList.add("animate-unravel");
+  }, [index]);
 
   function advance(direction: "left" | "right") {
     setLeaving(direction);
@@ -121,11 +138,13 @@ export function LetterStack({
         ))}
       </div>
 
-      {/* The stack. Cards are absolutely positioned; the top one is draggable.
-          `perspective` gives the swipe-away a real page-flip feel. */}
+      {/* The stack. The top card sits in normal flow so it grows to its full
+          length and scrolls with the page — no cramped inner scrollbar to fight
+          the swipe. The cards behind are absolutely positioned to fill it as a
+          backdrop. `perspective` gives the swipe-away a real page-flip feel. */}
       <div
-        className="relative select-none"
-        style={{ perspective: "1400px", minHeight: "26rem" }}
+        className="relative min-h-[26rem] select-none"
+        style={{ perspective: "1400px" }}
       >
         {letters
           .map((letter, i) => ({ letter, i }))
@@ -138,7 +157,9 @@ export function LetterStack({
             return (
               <div
                 key={letter.id}
-                className="absolute inset-0"
+                // The top card is in flow so its height drives the container and
+                // the page scrolls it; the ones behind fill that height.
+                className={isTop ? "relative" : "absolute inset-0"}
                 style={{
                   ...cardStyle(depth, { drag, dragging, leaving }),
                   transformStyle: "preserve-3d",
@@ -150,11 +171,23 @@ export function LetterStack({
                 onPointerUp={isTop ? onPointerUp : undefined}
                 onPointerCancel={isTop ? onPointerUp : undefined}
               >
-                <LetterCard
-                  letter={letter}
-                  openToken={openToken}
-                  bypass={bypass}
-                />
+                {/* The unravel layer. Nested inside the swipe-transform wrapper
+                    so its unroll composes with the drag/fly-off instead of
+                    overwriting it. `motion-reduce` opts out of the animation.
+                    `origin-top` unfurls from the top edge like a scroll. */}
+                <div
+                  ref={isTop ? topRef : undefined}
+                  className={`origin-top motion-reduce:animate-none${
+                    isTop ? "" : " h-full"
+                  }`}
+                >
+                  <LetterCard
+                    letter={letter}
+                    openToken={openToken}
+                    bypass={bypass}
+                    isTop={isTop}
+                  />
+                </div>
               </div>
             );
           })}
@@ -182,13 +215,21 @@ function LetterCard({
   letter,
   openToken,
   bypass,
+  isTop,
 }: {
   letter: StackLetter;
   openToken: string;
   bypass?: boolean;
+  // The top card grows to its content (the page scrolls it); the cards behind
+  // fill the container's height and clip, since they're only a backdrop.
+  isTop?: boolean;
 }) {
   return (
-    <article className="card flex h-full flex-col overflow-y-auto">
+    <article
+      className={`card flex flex-col ${
+        isTop ? "" : "h-full overflow-hidden"
+      }`}
+    >
       <h2 className="text-2xl font-extrabold text-sea-800">{letter.title}</h2>
       <p className="mt-1 text-xs text-sea-500">
         From <strong className="text-sea-700">{letter.authorName}</strong> ·
