@@ -258,13 +258,15 @@ export function LetterForm({
               existing draft already persists, so it is edited or deleted, not
               discarded. */}
           {!letter && (
-            <button
-              type="button"
-              onClick={() => setDiscarding(true)}
-              className="text-sm font-semibold text-sea-500 hover:text-blush-500"
-            >
-              Discard letter
-            </button>
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setDiscarding(true)}
+                className="text-sm font-semibold text-sea-500 hover:text-blush-500"
+              >
+                Discard letter
+              </button>
+            </div>
           )}
         </div>
       )}
