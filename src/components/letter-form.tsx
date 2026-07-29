@@ -27,7 +27,13 @@ export function LetterForm({
   letter?: ExistingLetter;
   // When the recipient is already decided (started from a child's avatar, or an
   // existing draft), the picker is hidden and the letter is fixed to this child.
-  lockedChild?: { id: string; name: string; avatar: string; photo: string | null };
+  lockedChild?: {
+    id: string;
+    name: string;
+    avatar: string;
+    photo: string | null;
+    openAtAge: number;
+  };
   // Whether this author's subscription covers photos. The server checks again.
   canUploadImages: boolean;
   // The photos this draft already holds, so the strip can show them. A new
@@ -45,6 +51,15 @@ export function LetterForm({
   // When true, the "seal forever" confirmation panel is shown instead of the
   // normal buttons.
   const [confirming, setConfirming] = useState(false);
+  // The chosen recipient. A locked child is fixed; otherwise it follows the
+  // picker. We need it to name the open age, and to hold the message back until
+  // a child is chosen so there's an age to show.
+  const [childId, setChildId] = useState(
+    lockedChild?.id ?? letter?.childId ?? "",
+  );
+  const selectedChild = lockedChild?.id === childId
+    ? lockedChild
+    : childOptions.find((child) => child.id === childId);
   // The body as blocks. Serialised back to the stored string on submit, so the
   // server sees exactly what the old textarea sent.
   const [blocks, setBlocks] = useState<LetterBlock[]>(() => {
@@ -98,7 +113,8 @@ export function LetterForm({
             id="childId"
             name="childId"
             className="field-input"
-            defaultValue={letter?.childId ?? ""}
+            value={childId}
+            onChange={(e) => setChildId(e.target.value)}
           >
             <option value="">Choose a child…</option>
             {childOptions.map((child) => (
@@ -133,10 +149,12 @@ export function LetterForm({
         />
       </div>
 
-      <p className="rounded-2xl bg-sea-100 px-4 py-3 text-sm text-sea-600">
-        🗓️ This bottle opens when your child reaches the age you set on their
-        profile - no per-letter date needed.
-      </p>
+      {selectedChild && (
+        <p className="rounded-2xl bg-sea-100 px-4 py-3 text-sm text-sea-600">
+          🗓️ This bottle opens when {selectedChild.name} turns{" "}
+          {selectedChild.openAtAge} years old.
+        </p>
+      )}
 
       {state.error && (
         <p className="rounded-2xl bg-blush-200 px-4 py-3 text-sm font-semibold text-blush-500">
