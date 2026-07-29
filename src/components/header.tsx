@@ -31,18 +31,18 @@ export function Header({
           >
             👧 Kids
           </Link>
-          <Link
-            href="/account"
-            className="text-sm font-semibold text-sea-600 hover:text-sea-800"
-          >
-            ⚙️ Account
-          </Link>
           {userName ? (
             <span className="hidden text-sm text-sea-600 sm:inline">
               Hi, {userName.split(" ")[0]} 👋
             </span>
           ) : null}
-          <Link href="/account" aria-label="Your account">
+          {/* The avatar is the way into the account page - clicking it opens
+              /account, so there's no separate Account nav link. */}
+          <Link
+            href="/account"
+            aria-label="Your account"
+            className="rounded-full transition hover:opacity-80"
+          >
             <UserAvatar name={userName} image={userImage} isPro={isPro} />
           </Link>
           <SignOutButton />
