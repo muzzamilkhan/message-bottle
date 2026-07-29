@@ -11,7 +11,8 @@
     "test": "node --test 'src/**/*.test.ts'",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:encrypt-letters": "node scripts/encrypt-existing-letters.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

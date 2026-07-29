@@ -7,6 +7,7 @@ import { ChildAvatar } from "@/components/child-avatar";
 import { formatDate } from "@/lib/letters";
 import { getAccessibleChildren } from "@/lib/children";
 import { sweepOrphanedImages } from "@/lib/letter-images";
+import { decryptLetterField } from "@/lib/letter-crypto-key";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -122,7 +123,7 @@ export default async function Dashboard() {
                     </span>
                   </div>
                   <h3 className="mt-3 text-lg font-bold text-sea-800">
-                    {draft.title || "Untitled draft"}
+                    {decryptLetterField(draft.title) || "Untitled draft"}
                   </h3>
                   <p className="text-sm text-sea-600">
                     {draft.child?.avatar ?? "💌"}{" "}

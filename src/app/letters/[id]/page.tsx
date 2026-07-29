@@ -7,6 +7,7 @@ import { LetterForm } from "@/components/letter-form";
 import { deleteLetter } from "@/app/actions";
 import { getAccessibleChildren, withoutPhotos } from "@/lib/children";
 import { canUploadImages } from "@/lib/subscription";
+import { decryptLetterField } from "@/lib/letter-crypto-key";
 
 // Only drafts have a page of their own — they're still editable. Sent letters
 // are sealed forever and can never be viewed, edited, or deleted by the author.
@@ -73,9 +74,11 @@ export default async function EditDraftPage({
           existingImages={letter.images}
           letter={{
             id: letter.id,
-            title: letter.title,
+            // Stored encrypted; the author owns this draft, so decrypt it back
+            // into the editor.
+            title: decryptLetterField(letter.title),
             childId: letter.childId,
-            body: letter.body,
+            body: decryptLetterField(letter.body),
           }}
         />
 

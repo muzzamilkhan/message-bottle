@@ -82,8 +82,8 @@ Pure libs take an **injectable clock** (`now`/`at` defaulting to `new Date()`) s
 rules are deterministic under test. Validation libs return **error codes**, not copy, and
 the calling action maps a code to its message — so tests assert on rules and wording stays
 free to change. The tested libs are `age`, `letters`, `child-input`, `letter-input`, `letter-stack-style`,
-`letter-blocks`, and `letter-rich-text`; `children.ts` and `prisma.ts` are DB access and
-stay untested.
+`letter-blocks`, `letter-rich-text`, and `letter-crypto`; `children.ts`, `prisma.ts`, and
+`letter-crypto-key.ts` are DB/env access and stay untested.
 
 Note that `npm run build` runs `prisma db push --accept-data-loss` against `DATABASE_URL`
 before building — it is not a read-only check.
@@ -139,6 +139,39 @@ adapter (`flags/next` + `@flags-sdk/vercel`), backed by Edge Config and overrida
 Vercel Toolbar. With the flag off — its default, and the case wherever `EDGE_CONFIG` is
 unset — the query param is inert. The flag is only evaluated when `?test=yes` is actually
 present, so normal opens cost no flag lookup.
+
+### Letter contents encrypted at rest
+
+A letter's `title` and `body` are stored **encrypted** in Postgres. They're the private
+message a parent writes, and application-level encryption keeps a database dump — a stolen
+backup, a leaked replica — from exposing them. The key lives only in
+`LETTER_ENCRYPTION_KEY` (32 bytes, hex or base64), never in the database, so the two have to
+leak together to matter. `recipientName` stays plaintext: it mirrors `Child.name`, which is
+already plaintext, so encrypting the snapshot would buy nothing.
+
+The scheme is AES-256-GCM with a fresh per-field IV; the stored string is
+`enc:v1:<base64url(iv‖tag‖ciphertext)>`. The pure rules live in `src/lib/letter-crypto.ts`
+(tested with an injected key); `src/lib/letter-crypto-key.ts` is the thin, untested half that
+reads the key from the environment — the same split as `letter-image.ts` / `letter-image-store.ts`.
+
+Three things follow, and changes must not weaken them:
+
+- **Encrypt on write, decrypt on read.** `saveLetter` encrypts `title`/`body` before they
+  touch the DB; the three read points — `dashboard`, `letters/[id]`, and `open/[token]` —
+  decrypt. The `open` page decrypts **only after the age gate passes**, so a locked page
+  never holds plaintext. Image-marker parsing and reconciliation read the *plaintext* body
+  the parser returned, never the stored copy, so encryption doesn't touch them. No query
+  filters on `title`/`body` content, so nothing else breaks.
+- **Legacy plaintext reads through.** `decryptField` returns any value without the `enc:v1:`
+  prefix untouched, so rows written before encryption still render. New writes are always
+  encrypted, so that set only shrinks. `npm run db:encrypt-letters` backfills existing rows
+  (idempotent — it skips already-encrypted ones).
+- **Fail-closed, fail-loud.** With no key set, reading an encrypted letter or writing any
+  letter throws rather than silently storing plaintext (reading a legacy plaintext row needs
+  no key, so that stays open). A prefixed value that won't decrypt — wrong key, tampering,
+  truncation — throws rather than rendering garbage. So **don't rotate the key in place** once
+  encrypted letters exist: the old rows were sealed with the old key and a new `v1` key can't
+  open them. A real rotation is a future `v2` that decrypts under either key.
 
 ### Inline letter images
 
