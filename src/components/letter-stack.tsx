@@ -121,11 +121,13 @@ export function LetterStack({
         ))}
       </div>
 
-      {/* The stack. Cards are absolutely positioned; the top one is draggable.
-          `perspective` gives the swipe-away a real page-flip feel. */}
+      {/* The stack. The top card sits in normal flow so it grows to its full
+          length and scrolls with the page — no cramped inner scrollbar to fight
+          the swipe. The cards behind are absolutely positioned to fill it as a
+          backdrop. `perspective` gives the swipe-away a real page-flip feel. */}
       <div
-        className="relative select-none"
-        style={{ perspective: "1400px", minHeight: "26rem" }}
+        className="relative min-h-[26rem] select-none"
+        style={{ perspective: "1400px" }}
       >
         {letters
           .map((letter, i) => ({ letter, i }))
@@ -138,7 +140,9 @@ export function LetterStack({
             return (
               <div
                 key={letter.id}
-                className="absolute inset-0"
+                // The top card is in flow so its height drives the container and
+                // the page scrolls it; the ones behind fill that height.
+                className={isTop ? "relative" : "absolute inset-0"}
                 style={{
                   ...cardStyle(depth, { drag, dragging, leaving }),
                   transformStyle: "preserve-3d",
@@ -154,6 +158,7 @@ export function LetterStack({
                   letter={letter}
                   openToken={openToken}
                   bypass={bypass}
+                  isTop={isTop}
                 />
               </div>
             );
@@ -182,13 +187,21 @@ function LetterCard({
   letter,
   openToken,
   bypass,
+  isTop,
 }: {
   letter: StackLetter;
   openToken: string;
   bypass?: boolean;
+  // The top card grows to its content (the page scrolls it); the cards behind
+  // fill the container's height and clip, since they're only a backdrop.
+  isTop?: boolean;
 }) {
   return (
-    <article className="card flex h-full flex-col overflow-y-auto">
+    <article
+      className={`card flex flex-col ${
+        isTop ? "" : "h-full overflow-hidden"
+      }`}
+    >
       <h2 className="text-2xl font-extrabold text-sea-800">{letter.title}</h2>
       <p className="mt-1 text-xs text-sea-500">
         From <strong className="text-sea-700">{letter.authorName}</strong> ·
