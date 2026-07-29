@@ -506,5 +506,8 @@ export async function deleteLetter(formData: FormData): Promise<void> {
   await deleteLetterImages(draft.images.map((image) => image.pathname));
   await prisma.letter.delete({ where: { id: draft.id } });
 
+  // The draft's own page (/letters/[id]) would now 404, so send the author
+  // back to their bottles instead of leaving them on a dead route.
   revalidatePath("/dashboard");
+  redirect("/dashboard");
 }
