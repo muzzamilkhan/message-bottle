@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { lifetimeProSignup } from "@/flags";
 import { SignInButton } from "@/components/auth-buttons";
 import { Bottle } from "@/components/bottle";
+import { PrivacySection } from "@/components/privacy-section";
 
 export default async function Home() {
   const session = await auth();
@@ -78,6 +79,8 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      <PrivacySection />
 
       <div className="waves pointer-events-none fixed inset-x-0 bottom-0 h-20 opacity-40" />
     </main>
