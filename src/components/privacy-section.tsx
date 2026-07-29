@@ -9,26 +9,26 @@ type PrivacyPoint = {
 
 const points: PrivacyPoint[] = [
   {
-    summary: "Your letters are for your child's eyes and yours — no one else's",
+    summary: "Your letters are for your child's eyes and yours - no one else's",
     detail:
       "The words you write are scrambled before they're stored, so even someone who got hold of our database would see nothing but gibberish. The letter is unlocked only for you while you write it, and for your child once the bottle is ready to open.",
   },
   {
     summary: "The photos you share stay private, never out in the open",
     detail:
-      "Any photo you add to a letter is kept in private storage — there's no public web address anyone can guess or share. A photo is served only to you and, when the time comes, to your child through their private open link. Until the bottle's day arrives, the photos stay locked away just like the words.",
+      "Any photo you add to a letter is kept in private storage - there's no public web address anyone can guess or share. A photo is served only to you and, when the time comes, to your child through their private open link. Until the bottle's day arrives, the photos stay locked away just like the words.",
   },
   {
     summary:
       "Remove a child and everything written to them disappears with it",
     detail:
-      "Removing a child isn't a soft delete. Every letter you wrote to them — drafts and sealed ones alike — along with all their photos is permanently removed from our storage right away. Once it's gone, it's gone.",
+      "Removing a child isn't a soft delete. Every letter you wrote to them - drafts and sealed ones alike - along with all their photos is permanently removed from our storage right away. Once it's gone, it's gone.",
   },
   {
     summary:
       "Close your account and every trace of your data goes with it",
     detail:
-      "When you close your account we remove everything tied to it — your children's profiles, every letter, and every photo. Nothing is quietly kept behind the scenes.",
+      "When you close your account we remove everything tied to it - your children's profiles, every letter, and every photo. Nothing is quietly kept behind the scenes.",
   },
 ];
 
