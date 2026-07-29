@@ -487,6 +487,43 @@ export async function deleteAccount(): Promise<void> {
   await signOut({ redirectTo: "/" });
 }
 
+// Throw away a new letter that was never saved, deleting any photos uploaded
+// while writing it. A brand-new letter's uploads sit unattached
+// (`letterId: null`) until its first save; the orphan sweep would collect them
+// eventually, but a deliberate "discard" should honour the delete-the-photos
+// promise at once rather than 24h later.
+//
+// Scoped to the caller's own unattached rows, so it can never reach a photo
+// that belongs to a saved draft or a sealed letter - those always carry a
+// letterId, and this must not become a way to unpick a sealed letter's images.
+// Given the ids the editor uploaded this session, it deletes only those that
+// are still unattached; blobs first, then rows, the order every deletion path
+// uses.
+export async function discardDraftImages(imageIds: string[]): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  // A "use server" export is a reachable endpoint, so don't trust the shape.
+  if (!Array.isArray(imageIds)) return;
+  const ids = imageIds.filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+  if (ids.length === 0) return;
+
+  const images = await prisma.letterImage.findMany({
+    where: { id: { in: ids }, authorId: session.user.id, letterId: null },
+    select: { id: true, pathname: true },
+  });
+  if (images.length === 0) return;
+
+  // Blobs first: a failure here leaves rows pointing at missing bytes (swept
+  // later), never bytes with no row pointing at them.
+  await deleteLetterImages(images.map((image) => image.pathname));
+  await prisma.letterImage.deleteMany({
+    where: { id: { in: images.map((image) => image.id) } },
+  });
+}
+
 export async function deleteLetter(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) return;
