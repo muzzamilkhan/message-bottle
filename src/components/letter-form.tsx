@@ -1,8 +1,13 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { saveLetter, type LetterFormState } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import {
+  discardDraftImages,
+  saveLetter,
+  type LetterFormState,
+} from "@/app/actions";
 import { ChildAvatar } from "@/components/child-avatar";
 import { LetterBlocksEditor } from "@/components/letter-blocks-editor";
 import type { DraftImage } from "@/components/use-letter-image-upload";
@@ -48,9 +53,20 @@ export function LetterForm({
   // form submits, depending on which button was pressed.
   const intentRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   // When true, the "seal forever" confirmation panel is shown instead of the
   // normal buttons.
   const [confirming, setConfirming] = useState(false);
+  // When true, the "discard this letter" confirmation panel is shown.
+  const [discarding, setDiscarding] = useState(false);
+  const [discardPending, startDiscard] = useTransition();
+  // Ids of photos uploaded while writing *this* letter. A brand-new letter's
+  // uploads sit unattached until its first save, so discarding before saving
+  // would leave them for the 24h orphan sweep - we delete them now instead.
+  // We track every upload, not just the ones still in the body, because a photo
+  // the author added and then removed is just as unsaved and just as owed a
+  // deletion.
+  const sessionImageIds = useRef<string[]>([]);
   // The chosen recipient. A locked child is fixed; otherwise it follows the
   // picker. We need it to name the open age, and to hold the message back until
   // a child is chosen so there's an age to show.
@@ -71,6 +87,16 @@ export function LetterForm({
   function submitWith(intent: "draft" | "submit") {
     if (intentRef.current) intentRef.current.value = intent;
     formRef.current?.requestSubmit();
+  }
+
+  // Throw the letter away without saving, taking its just-uploaded photos with
+  // it. The server only deletes still-unattached rows the caller owns, so this
+  // can never reach a saved draft's or a sealed letter's images.
+  function discard() {
+    startDiscard(async () => {
+      await discardDraftImages(sessionImageIds.current);
+      router.push("/dashboard");
+    });
   }
 
   return (
@@ -146,6 +172,9 @@ export function LetterForm({
           letterId={letter?.id}
           canUpload={canUploadImages}
           existingImages={existingImages}
+          onImageUploaded={(image) => {
+            sessionImageIds.current = [...sessionImageIds.current, image.id];
+          }}
         />
       </div>
 
@@ -183,16 +212,60 @@ export function LetterForm({
             </button>
           </div>
         </div>
+      ) : discarding ? (
+        <div className="rounded-2xl bg-blush-100 p-5 ring-1 ring-blush-200">
+          <p className="text-sm font-semibold text-blush-500">
+            Discard this letter?
+          </p>
+          <p className="mt-2 text-sm text-sea-700">
+            This letter hasn&apos;t been saved. Discarding throws away what
+            you&apos;ve written{" "}
+            <strong>and deletes any photos you added to it</strong>. This
+            can&apos;t be undone.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={discard}
+              disabled={discardPending}
+              className="btn-primary w-full disabled:opacity-60"
+            >
+              {discardPending ? "Discarding…" : "Yes, discard it"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDiscarding(false)}
+              disabled={discardPending}
+              className="btn-secondary"
+            >
+              Keep writing
+            </button>
+          </div>
+        </div>
       ) : (
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <SaveDraftButton onSave={() => submitWith("draft")} />
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="btn-primary w-full"
-          >
-            🍾 Seal &amp; set adrift
-          </button>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <SaveDraftButton onSave={() => submitWith("draft")} />
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="btn-primary w-full"
+            >
+              🍾 Seal &amp; set adrift
+            </button>
+          </div>
+          {/* Only a brand-new letter has unsaved uploads to clean up; an
+              existing draft already persists, so it is edited or deleted, not
+              discarded. */}
+          {!letter && (
+            <button
+              type="button"
+              onClick={() => setDiscarding(true)}
+              className="text-sm font-semibold text-sea-500 hover:text-blush-500"
+            >
+              Discard letter
+            </button>
+          )}
         </div>
       )}
     </form>

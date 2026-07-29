@@ -27,6 +27,7 @@ export function LetterBlocksEditor({
   letterId,
   canUpload,
   existingImages,
+  onImageUploaded,
 }: {
   blocks: LetterBlock[];
   onChange: (blocks: LetterBlock[]) => void;
@@ -37,6 +38,10 @@ export function LetterBlocksEditor({
   // Photos this draft already holds, so their dimensions are known before the
   // image loads. Uploads from this session are merged in.
   existingImages: DraftImage[];
+  // Fired once per successful upload so the form can track which photos this
+  // session created - the set a "discard" needs to delete, whether or not they
+  // are still in the body.
+  onImageUploaded?: (image: DraftImage) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { busy, error, upload } = useLetterImageUpload({ letterId });
@@ -164,6 +169,7 @@ export function LetterBlocksEditor({
     if (!image) return;
 
     setUploaded((current) => [...current, image]);
+    onImageUploaded?.(image);
 
     const at = insertAt.current ?? blocks.length;
     const next = [...blocks];
