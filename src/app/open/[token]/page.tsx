@@ -4,6 +4,7 @@ import { ChildAvatar } from "@/components/child-avatar";
 import { LetterStack, type StackLetter } from "@/components/letter-stack";
 import { countdown, formatDate } from "@/lib/letters";
 import { birthdayAtAge, hasReachedOpenAge } from "@/lib/age";
+import { decryptLetterField } from "@/lib/letter-crypto-key";
 import { openBottleBypass } from "@/flags";
 
 // The child's self-authenticating open link. The unguessable token in the URL
@@ -131,8 +132,10 @@ export default async function OpenPage({
           letters={child.letters.map(
             (letter): StackLetter => ({
               id: letter.id,
-              title: letter.title,
-              body: letter.body,
+              // Contents are stored encrypted; decrypt only now that the age
+              // gate has passed, so a locked page never even holds plaintext.
+              title: decryptLetterField(letter.title),
+              body: decryptLetterField(letter.body),
               images: letter.images,
               authorName: letter.author?.name?.trim() || "A parent",
               writtenDate: formatDate(letter.createdAt),

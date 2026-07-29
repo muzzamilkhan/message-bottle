@@ -19,6 +19,7 @@ import {
 } from "@/lib/letter-input";
 import { canUploadImages } from "@/lib/subscription";
 import { letterImageIds } from "@/lib/letter-body";
+import { encryptLetterField } from "@/lib/letter-crypto-key";
 import {
   IMAGE_MAX_UPLOAD_BYTES,
   IMAGES_PER_LETTER,
@@ -88,11 +89,17 @@ export async function saveLetter(
     }
   }
 
+  // Title and body are the letter's private contents; encrypt them before they
+  // touch the database. recipientName is a snapshot of the child's name, which
+  // already sits in plaintext on the Child row, so encrypting it here would buy
+  // nothing. Image markers live inside `body`, but the referenced-image
+  // reconciliation below reads the plaintext `parsed.value.body`, so it is
+  // unaffected by encrypting the stored copy.
   const data = {
-    title,
+    title: encryptLetterField(title),
     recipientName: child?.name ?? "",
     childId: child?.id ?? null,
-    body,
+    body: encryptLetterField(body),
     status: submitting ? "SENT" : "DRAFT",
   };
 
