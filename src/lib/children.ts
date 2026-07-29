@@ -8,6 +8,9 @@ export type AccessibleChild = {
   name: string;
   avatar: string;
   photo: string | null;
+  // The age at which this child's bottles open, so a letter form can tell the
+  // author exactly when the bottle it's addressed to will be delivered.
+  openAtAge: number;
 };
 
 // Every child this user owns, oldest first.
@@ -17,7 +20,7 @@ export async function getAccessibleChildren(
   return prisma.child.findMany({
     where: { parentId: userId },
     orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, avatar: true, photo: true },
+    select: { id: true, name: true, avatar: true, photo: true, openAtAge: true },
   });
 }
 

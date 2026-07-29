@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/header";
 import { LetterForm } from "@/components/letter-form";
-import { deleteLetter } from "@/app/actions";
+import { DeleteDraftButton } from "@/components/delete-draft-button";
 import { getAccessibleChildren, withoutPhotos } from "@/lib/children";
 import { canUploadImages } from "@/lib/subscription";
 import { decryptLetterField } from "@/lib/letter-crypto-key";
@@ -86,19 +86,10 @@ export default async function EditDraftPage({
           }}
         />
 
-        <form action={deleteLetter} className="mt-6 text-center">
-          <input type="hidden" name="id" value={letter.id} />
-          <button
-            type="submit"
-            className="text-sm font-semibold text-sea-400 hover:text-blush-500"
-          >
-            {letter._count.images > 0
-              ? `Delete this draft and its ${letter._count.images} photo${
-                  letter._count.images === 1 ? "" : "s"
-                }`
-              : "Delete this draft"}
-          </button>
-        </form>
+        <DeleteDraftButton
+          letterId={letter.id}
+          photosCount={letter._count.images}
+        />
       </main>
     </>
   );
