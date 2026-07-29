@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   cardStyle,
   LEAVE_MS,
@@ -43,9 +43,26 @@ export function LetterStack({
   // the next letter takes its place.
   const [leaving, setLeaving] = useState<null | "left" | "right">(null);
   const startX = useRef(0);
+  // The current top card's unravel layer. Each time a new letter reaches the
+  // top we replay the unroll on it.
+  const topRef = useRef<HTMLDivElement | null>(null);
 
   const total = letters.length;
   const done = index >= total;
+
+  // Re-trigger the unravel every time the top letter changes (and on first
+  // mount). The same DOM node is reused as cards shuffle forward — so its
+  // photos aren't re-fetched — which means a CSS animation won't replay on its
+  // own; removing the class, forcing a reflow, then re-adding it restarts it.
+  // useLayoutEffect so the rolled-up first frame paints before the browser
+  // ever shows the open card.
+  useLayoutEffect(() => {
+    const el = topRef.current;
+    if (!el) return;
+    el.classList.remove("animate-unravel");
+    void el.offsetWidth;
+    el.classList.add("animate-unravel");
+  }, [index]);
 
   function advance(direction: "left" | "right") {
     setLeaving(direction);
@@ -154,12 +171,23 @@ export function LetterStack({
                 onPointerUp={isTop ? onPointerUp : undefined}
                 onPointerCancel={isTop ? onPointerUp : undefined}
               >
-                <LetterCard
-                  letter={letter}
-                  openToken={openToken}
-                  bypass={bypass}
-                  isTop={isTop}
-                />
+                {/* The unravel layer. Nested inside the swipe-transform wrapper
+                    so its unroll composes with the drag/fly-off instead of
+                    overwriting it. `motion-reduce` opts out of the animation.
+                    `origin-top` unfurls from the top edge like a scroll. */}
+                <div
+                  ref={isTop ? topRef : undefined}
+                  className={`origin-top motion-reduce:animate-none${
+                    isTop ? "" : " h-full"
+                  }`}
+                >
+                  <LetterCard
+                    letter={letter}
+                    openToken={openToken}
+                    bypass={bypass}
+                    isTop={isTop}
+                  />
+                </div>
               </div>
             );
           })}

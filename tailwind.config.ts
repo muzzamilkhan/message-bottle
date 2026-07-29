@@ -48,10 +48,24 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-8px)" },
         },
+        // A letter unrolling like a scroll as it reaches the top of the stack:
+        // curled shut at the top edge, then unfurling down into full view.
+        unravel: {
+          "0%": {
+            transform: "perspective(1400px) rotateX(-82deg) scaleY(0.4)",
+            opacity: "0",
+          },
+          "55%": { opacity: "1" },
+          "100%": {
+            transform: "perspective(1400px) rotateX(0deg) scaleY(1)",
+            opacity: "1",
+          },
+        },
       },
       animation: {
         bob: "bob 6s ease-in-out infinite",
         float: "float 4s ease-in-out infinite",
+        unravel: "unravel 640ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },
