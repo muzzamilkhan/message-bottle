@@ -23,7 +23,7 @@ export function DeleteAccountSection({
         <h2 className="text-lg font-bold text-blush-500">⚠️ Delete account</h2>
         <p className="mt-1 text-sm text-sea-700">
           Closing your account permanently deletes everything you&apos;ve made
-          here — all{" "}
+          here - all{" "}
           <strong>
             {childrenCount} child{childrenCount === 1 ? "" : "ren"}
           </strong>

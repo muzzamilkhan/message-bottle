@@ -24,7 +24,7 @@ export default async function AccountPage() {
       },
     }),
     prisma.child.count({ where: { parentId: session.user.id } }),
-    // Drafts and sealed letters alike — the whole set delete would destroy.
+    // Drafts and sealed letters alike - the whole set delete would destroy.
     prisma.letter.count({ where: { authorId: session.user.id } }),
     prisma.letterImage.count({ where: { authorId: session.user.id } }),
   ]);
@@ -70,13 +70,13 @@ export default async function AccountPage() {
               <div className="flex justify-between gap-4">
                 <dt className="font-semibold text-sea-600">Name</dt>
                 <dd className="text-right text-sea-800">
-                  {user.name ?? "—"}
+                  {user.name ?? "-"}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="font-semibold text-sea-600">Email</dt>
                 <dd className="break-all text-right text-sea-800">
-                  {user.email ?? "—"}
+                  {user.email ?? "-"}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">

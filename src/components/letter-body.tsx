@@ -39,8 +39,8 @@ export function LetterBody({
       {nodes.map((node, index) => {
         if (node.kind === "image") {
           const image = byId.get(node.id);
-          // A marker with no matching image — a hand-edited body, or an image
-          // deleted from under it — is skipped rather than breaking the page.
+          // A marker with no matching image - a hand-edited body, or an image
+          // deleted from under it - is skipped rather than breaking the page.
           if (!image) return null;
           return (
             <LetterImage
@@ -92,7 +92,7 @@ function LetterImage({
       src={src}
       // A photograph is content, not decoration, so never alt="". There is no
       // caption field in the data model, so this is generic but honest.
-      // ("photo" itself is out: jsx-a11y/img-redundant-alt — a screen reader
+      // ("photo" itself is out: jsx-a11y/img-redundant-alt - a screen reader
       // already announces that this is an image.)
       alt="Included with this letter"
       width={image.width}

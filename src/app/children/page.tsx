@@ -23,8 +23,8 @@ export default async function ChildrenPage() {
     orderBy: { createdAt: "asc" },
     include: {
       _count: { select: { letters: true } },
-      // Every letter written to this child, drafts and sealed alike — matches
-      // the set `deleteChild` destroys — so the photo total below covers
+      // Every letter written to this child, drafts and sealed alike - matches
+      // the set `deleteChild` destroys - so the photo total below covers
       // exactly what the warning must promise.
       letters: {
         select: { _count: { select: { images: true } } },
@@ -76,7 +76,7 @@ export default async function ChildrenPage() {
         </h1>
         <p className="mb-6 text-sea-600">
           Add a profile for each child, edit their details anytime, and set a
-          bottle timer — the age when they can open their letters from their own
+          bottle timer - the age when they can open their letters from their own
           private link.
         </p>
 
@@ -91,7 +91,7 @@ export default async function ChildrenPage() {
             </h2>
             {childCards.length === 0 ? (
               <div className="card text-sea-600">
-                Add your first child using the form — they&apos;ll show up here.
+                Add your first child using the form - they&apos;ll show up here.
               </div>
             ) : (
               <ul className="space-y-3">

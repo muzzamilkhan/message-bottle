@@ -3,7 +3,7 @@ import { SignOutButton } from "@/components/auth-buttons";
 import { UserAvatar } from "@/components/user-avatar";
 
 // The avatar (with its Pro badge) rides along on every authenticated page, so
-// each page passes the parent's name, photo, and Pro status down — the callers
+// each page passes the parent's name, photo, and Pro status down - the callers
 // already load the session and subscription, so the header stays a plain
 // presentational component.
 export function Header({

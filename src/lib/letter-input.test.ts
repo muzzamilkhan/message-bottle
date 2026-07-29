@@ -137,7 +137,7 @@ describe("images and sealing", () => {
     assert.equal(result.ok, true);
   });
 
-  // An incomplete letter is incomplete first — reporting the image problem
+  // An incomplete letter is incomplete first - reporting the image problem
   // would send the parent looking for photos in an empty letter.
   it("reports incompleteness before the image rule", () => {
     const result = parseLetterInput({ ...complete, body: "" }, "submit", {
@@ -150,7 +150,7 @@ describe("images and sealing", () => {
 });
 
 // The cap has to reject the save outright rather than let reconciliation
-// quietly redefine which markers count as referenced — silently dropping the
+// quietly redefine which markers count as referenced - silently dropping the
 // images past the cap would delete a parent's photograph for good.
 describe("the per-letter image cap", () => {
   const complete = { title: "T", childId: "c1", body: "Hello" };

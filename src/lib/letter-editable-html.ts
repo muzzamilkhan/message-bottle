@@ -1,7 +1,7 @@
 // Turn a text block's stored **/* form into contenteditable markup.
 //
 // A text block may hold several paragraphs (blank-line separated), and the
-// real renderer — parseSpans in letter-body.ts, via parseLetterBody — is only
+// real renderer - parseSpans in letter-body.ts, via parseLetterBody - is only
 // ever called with ONE paragraph at a time: parseLetterBody splits the body
 // on blank lines before handing each piece to parseSpans. Pairing markers
 // across a blank line here would let the editor pair asterisks the renderer
@@ -11,7 +11,7 @@
 
 import { parseSpans } from "./letter-body.ts";
 
-// Every piece of the parent's text goes through escapeHtml first — so the
+// Every piece of the parent's text goes through escapeHtml first - so the
 // markup this module builds is markup we generated, not markup anyone
 // supplied. (dangerouslySetInnerHTML is still not used: the caller does a
 // direct innerHTML write on a ref, under the same rule, and it is the only
@@ -27,7 +27,7 @@ export function escapeHtml(text: string): string {
 // Closes and reopens at crossing points (the same trick serializeRichText's
 // setFormat uses in the other direction) so tags always nest correctly. A
 // naive inline emitter can produce a crossing pair like <b>a<i>b</b></i> for
-// input like "**a*b**" — the browser silently re-nests that into
+// input like "**a*b**" - the browser silently re-nests that into
 // <b>a<i>b</i></b>, which changes which characters are italic on the next
 // read. Bold always nests outside italic here, so italic closes and reopens
 // around any bold boundary instead of crossing it.

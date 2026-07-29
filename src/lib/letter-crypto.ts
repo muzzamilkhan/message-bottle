@@ -29,8 +29,8 @@ const TAG_BYTES = 16;
 const KEY_BYTES = 32;
 
 // True when a stored value is one this module wrote. Anything else is treated
-// as legacy plaintext — a letter written before encryption was switched on, or
-// one that a backfill hasn't reached yet — and read back untouched. New writes
+// as legacy plaintext - a letter written before encryption was switched on, or
+// one that a backfill hasn't reached yet - and read back untouched. New writes
 // are always encrypted, so the plaintext branch only ever shrinks.
 export function isEncrypted(stored: string): boolean {
   return stored.startsWith(SCHEME);
@@ -49,8 +49,8 @@ export function encryptField(plaintext: string, key: Buffer): string {
 
 // Decrypt a stored value, or pass a legacy plaintext value straight through.
 //
-// A value that carries the scheme prefix but fails to decrypt — a truncated
-// blob, the wrong key, a tampered tag — throws rather than returning garbage:
+// A value that carries the scheme prefix but fails to decrypt - a truncated
+// blob, the wrong key, a tampered tag - throws rather than returning garbage:
 // rendering a corrupted letter as if it were real would be worse than an error.
 export function decryptField(stored: string, key: Buffer): string {
   if (!isEncrypted(stored)) return stored;

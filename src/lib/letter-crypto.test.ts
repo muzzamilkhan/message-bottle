@@ -19,7 +19,7 @@ describe("encryptField / decryptField", () => {
   });
 
   it("round-trips unicode and image markers intact", () => {
-    const body = "🌊 for you\n[[img:abc123]]\ncafé — naïve — 日本語";
+    const body = "🌊 for you\n[[img:abc123]]\ncafé - naïve - 日本語";
     assert.equal(decryptField(encryptField(body, KEY), KEY), body);
   });
 

@@ -2,14 +2,14 @@ import { flag } from "flags/next";
 import { vercelAdapter } from "@flags-sdk/vercel";
 
 // Testing escape hatch for the open page's age gate. See the comment in
-// src/app/open/[token]/page.tsx — this only unseals bottles alongside
+// src/app/open/[token]/page.tsx - this only unseals bottles alongside
 // `?test=yes`, and is off unless the deployment turns it on.
 const bypassFlag = flag({
   key: "open-bottle-bypass",
   adapter: vercelAdapter(),
 });
 
-// Evaluating the flag can throw, not just return false — an unset EDGE_CONFIG
+// Evaluating the flag can throw, not just return false - an unset EDGE_CONFIG
 // or an unresolvable adapter dependency both surface as an exception. This
 // guards children's photos, so it fails closed: any failure to *prove* the
 // bypass is on is treated as off, and bottles stay sealed.
@@ -32,7 +32,7 @@ export async function openBottleBypass(): Promise<boolean> {
 // Limited-time promotion: while this is on, the home page shows a banner
 // advertising lifetime Pro for new signups, and every newly created user is
 // granted the PRO tier by default (see events.createUser in src/auth.ts). Off
-// unless the deployment turns it on — an unset EDGE_CONFIG leaves it off.
+// unless the deployment turns it on - an unset EDGE_CONFIG leaves it off.
 const lifetimeProSignupFlag = flag({
   key: "lifetime-pro-signup",
   adapter: vercelAdapter(),

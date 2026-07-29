@@ -6,7 +6,7 @@
 // to a byte is through a Function that authorized the request first, which is
 // src/app/api/letter-image/[id]/route.ts.
 //
-// Untested by design — it is a thin wrapper over a network service, and the
+// Untested by design - it is a thin wrapper over a network service, and the
 // rules worth testing live in letter-image.ts.
 
 import { del, get, put } from "@vercel/blob";

@@ -1,5 +1,5 @@
-// The letter body grammar. A body is a plain string — the column is unchanged
-// and no letter needed migrating — carrying a deliberately tiny subset of
+// The letter body grammar. A body is a plain string - the column is unchanged
+// and no letter needed migrating - carrying a deliberately tiny subset of
 // Markdown plus image markers.
 //
 // This parser produces nodes, and src/components/letter-body.tsx turns those
@@ -13,7 +13,7 @@ export type LetterNode =
   | { kind: "paragraph"; spans: Span[] }
   | { kind: "image"; id: string };
 
-// An image reference. Only ever a whole line — prose that happens to mention a
+// An image reference. Only ever a whole line - prose that happens to mention a
 // marker stays prose. Ids are cuids, so letters and digits.
 export const IMAGE_MARKER_PATTERN = /^\[\[img:([A-Za-z0-9]+)\]\]$/;
 
@@ -103,7 +103,7 @@ export function parseLetterBody(body: string): LetterNode[] {
 // Every image id the body references, in order, without repeats.
 //
 // Cleanup uses this to decide what is still referenced, and the renderer uses
-// the same parser to decide what to show — so the two can never disagree about
+// the same parser to decide what to show - so the two can never disagree about
 // which images a letter contains.
 export function letterImageIds(body: string): string[] {
   const ids = parseLetterBody(body)

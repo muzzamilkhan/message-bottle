@@ -16,7 +16,7 @@ export default async function Home() {
     <main className="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center px-6">
       {proPromo && (
         <div className="mt-4 w-full rounded-2xl bg-gradient-to-r from-sea-600 to-sea-800 px-5 py-3 text-center text-sm font-semibold text-white shadow-md">
-          ✨ Limited-time offer — every new signup gets{" "}
+          ✨ Limited-time offer - every new signup gets{" "}
           <span className="font-extrabold">Pro, free for life</span>. Sign up now
           and Pro is yours by default.
         </div>
@@ -35,7 +35,7 @@ export default async function Home() {
             right.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row md:items-start">
-            <SignInButton label="Start writing — sign in with Google" />
+            <SignInButton label="Start writing - sign in with Google" />
             <Link href="#how" className="btn-secondary text-sm">
               How it works
             </Link>
@@ -58,7 +58,7 @@ export default async function Home() {
             {
               emoji: "✍️",
               title: "Write a letter",
-              text: "Pour your heart out to your child — a birthday note, first-day-of-school wishes, or just because.",
+              text: "Pour your heart out to your child - a birthday note, first-day-of-school wishes, or just because.",
             },
             {
               emoji: "💾",

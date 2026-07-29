@@ -15,7 +15,7 @@ export const IMAGE_MAX_DIMENSION = 1280;
 // overshoots the byte cap at the fit size, the only lever left is fewer pixels,
 // so we re-encode at progressively smaller sizes down to this floor. At 400px a
 // photo is still recognisable in a letter, and a quality-0.6 WebP that small is
-// a small fraction of the cap for any real image — so we never actually reach
+// a small fraction of the cap for any real image - so we never actually reach
 // the floor, but it guarantees the fallback terminates.
 export const IMAGE_MIN_DIMENSION = 400;
 
@@ -39,7 +39,7 @@ export const IMAGE_QUALITY_LADDER = [0.82, 0.7, 0.6] as const;
 export const IMAGES_PER_LETTER = 12;
 
 // The stored size for a source image: aspect ratio preserved, long edge capped.
-// A source already within the cap is left alone rather than upscaled — there is
+// A source already within the cap is left alone rather than upscaled - there is
 // no detail to invent, and storing it as-is keeps it sharp.
 export function fitDimensions(
   width: number,
@@ -81,8 +81,8 @@ export function downscaleSteps(
 // size. Encoding is the only place we learn a photo is too dense to fit, and by
 // then the quality ladder is spent, so the remaining lever is pixels: each rung
 // is ~15% smaller than the last, down to the floor. Starting at `from` means
-// the first rung is the fit size itself — the size the quality ladder already
-// runs at — so a photo that fits there never shrinks further. Paired with the
+// the first rung is the fit size itself - the size the quality ladder already
+// runs at - so a photo that fits there never shrinks further. Paired with the
 // quality ladder this makes "too large even after shrinking" unreachable for a
 // real photo.
 export function shrinkLadder(from: number = IMAGE_MAX_DIMENSION): number[] {
@@ -109,7 +109,7 @@ export type LetterImageError =
 //
 // Plain values in, plain values out, so the highest-stakes deletion decision
 // in this feature is testable without a session or a database. Reconciliation
-// deletes exactly what this returns — blobs first, then rows.
+// deletes exactly what this returns - blobs first, then rows.
 export function staleImages<T extends { id: string; pathname: string }>(
   referenced: string[],
   attached: T[],
@@ -142,7 +142,7 @@ export function letterImageMessage(error: LetterImageError): string {
 // Validate what the browser uploaded.
 //
 // The client downscales and compresses before sending, but that's a UX
-// convenience and never a trust boundary — anyone can POST to a server action,
+// convenience and never a trust boundary - anyone can POST to a server action,
 // so every one of these checks has to hold here on its own.
 export function validateUpload(input: {
   mimeType: string;

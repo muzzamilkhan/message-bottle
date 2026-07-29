@@ -9,7 +9,7 @@ import { toEditableHtml } from "@/lib/letter-editable-html";
 // The load-bearing rule: React writes this element's content ONCE, on mount,
 // and never again. A contenteditable whose innerHTML React re-renders puts the
 // caret back at the start on every keystroke, so `text` is an initial value,
-// not a controlled one — state flows DOM → React only. Everything else here
+// not a controlled one - state flows DOM → React only. Everything else here
 // follows from that.
 
 export function LetterTextBlock({
@@ -20,7 +20,7 @@ export function LetterTextBlock({
   onBlur,
 }: {
   // The initial content only. Later changes to this prop are ignored by
-  // design — see the note at the top of this file.
+  // design - see the note at the top of this file.
   text: string;
   placeholder?: string;
   onChange: (text: string) => void;

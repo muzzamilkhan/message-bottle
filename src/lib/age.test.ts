@@ -98,7 +98,7 @@ describe("describeBottleTimer", () => {
       at("2040-01-01"),
     );
     assert.equal(result.unlocked, true);
-    assert.equal(result.timerLabel, "Unlocked — Ada can open their bottles now");
+    assert.equal(result.timerLabel, "Unlocked - Ada can open their bottles now");
   });
 
   it("returns no label when the child has no birthday", () => {

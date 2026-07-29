@@ -25,7 +25,7 @@ export const SWIPE_THRESHOLD = 110;
 // swapping in the next card, so the two must stay in step.
 export const LEAVE_MS = 380;
 
-// How many cards are rendered at once — the top one plus two behind it.
+// How many cards are rendered at once - the top one plus two behind it.
 export const VISIBLE_CARDS = 3;
 
 // True when a finished drag was far enough to send the card away.

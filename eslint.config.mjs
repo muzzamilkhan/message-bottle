@@ -15,7 +15,7 @@ export default tseslint.config(
     ignores: [
       // Build output and dependencies, at the root and anywhere below it.
       // The `**/` forms matter because agent worktrees under .claude/ carry
-      // their own builds, and a root-anchored pattern doesn't reach them —
+      // their own builds, and a root-anchored pattern doesn't reach them -
       // ESLint doesn't read nested .gitignore files the way git does.
       ".next/**",
       "**/.next/**",

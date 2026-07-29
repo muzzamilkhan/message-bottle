@@ -32,7 +32,7 @@ export function LetterBlocksEditor({
   onChange: (blocks: LetterBlock[]) => void;
   letterId?: string;
   // Whether this author's subscription covers uploading. The server checks
-  // again — this only decides what the form offers.
+  // again - this only decides what the form offers.
   canUpload: boolean;
   // Photos this draft already holds, so their dimensions are known before the
   // image loads. Uploads from this session are merged in.
@@ -50,7 +50,7 @@ export function LetterBlocksEditor({
   const insertAt = useRef<number | null>(null);
 
   // Keys are assigned once per block and kept in step with the block list by
-  // index. A ref, not state — changing a key must never trigger a render.
+  // index. A ref, not state - changing a key must never trigger a render.
   const nextKey = useRef(0);
   const keysRef = useRef<string[]>([]);
   if (keysRef.current.length !== blocks.length) {
@@ -148,7 +148,7 @@ export function LetterBlocksEditor({
         active.dispatchEvent(new Event("input", { bubbles: true }));
       }
       // Toggling a mark doesn't move the caret, so selectionchange may not
-      // fire — re-read the state directly so the button updates now.
+      // fire - re-read the state directly so the button updates now.
       refreshMarks();
     },
     [refreshMarks],
@@ -189,7 +189,7 @@ export function LetterBlocksEditor({
         {keyed.map(({ key, block }, index) => {
           if (block.kind === "photo") {
             const image = known.get(block.id);
-            // An id with no known dimensions still renders — the image loads,
+            // An id with no known dimensions still renders - the image loads,
             // the box just isn't reserved.
             return (
               <LetterPhotoBlock

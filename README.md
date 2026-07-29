@@ -16,10 +16,10 @@ login), and **Tailwind CSS** for the cute seaside theme. Deploys cleanly to
 - 🍾 Sealing is final: once sent, a letter can never be viewed, edited, or
   deleted by the author
 - 🗓️ Time-lock: a letter opens when the recipient child reaches their bottle-timer
-  age — the open date is set on the child, not per letter
+  age - the open date is set on the child, not per letter
 - 🌊 Dashboard showing your count of sent messages and a list of editable drafts
 - 👶 Add and **edit** each child's details (name, avatar, full birthday)
-- 🍾 Every child has a required **bottle timer** — the age (older than they are
+- 🍾 Every child has a required **bottle timer** - the age (older than they are
   now) at which they can open their bottles from a private, self-authenticating
   link (`/open/<token>`), no account needed
 
@@ -39,10 +39,10 @@ Copy the example file and fill in the values:
 cp .env.example .env
 ```
 
-- **`DATABASE_URL`** — a Postgres connection string (Vercel Postgres, Neon,
+- **`DATABASE_URL`** - a Postgres connection string (Vercel Postgres, Neon,
   Supabase, or local Postgres).
-- **`AUTH_SECRET`** — run `openssl rand -base64 32`.
-- **`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`** — from the
+- **`AUTH_SECRET`** - run `openssl rand -base64 32`.
+- **`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`** - from the
   [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
   Add the redirect URI `http://localhost:3000/api/auth/callback/google` for
   local dev (and your production URL when you deploy).
@@ -63,7 +63,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Deploying to Vercel
 
 1. Push this repo to GitHub and import it into Vercel.
-2. Add a **Postgres** database from the Vercel dashboard — this populates
+2. Add a **Postgres** database from the Vercel dashboard - this populates
    `DATABASE_URL` automatically.
 3. Add `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and `AUTH_GOOGLE_SECRET` as
    environment variables.
@@ -106,7 +106,7 @@ their own.
 ## The bottle timer (a child's self-opening link)
 
 Every child has a required **bottle timer**: an age, older than they are today,
-at which they may open their bottles themselves — without an account. Creating a
+at which they may open their bottles themselves - without an account. Creating a
 child mints a random, unguessable `openToken` and produces a private link
 (`/open/<token>`) you hand to the child.
 

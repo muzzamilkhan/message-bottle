@@ -11,7 +11,7 @@ profile photo; a shared `<ChildAvatar>` component replacing the ad-hoc emoji spa
 
 Out of scope: inline images in letter bodies. Those are a different size class with a
 different lifecycle and will need real blob storage. This design deliberately does not
-build shared infrastructure for them — see "Why not blob storage".
+build shared infrastructure for them - see "Why not blob storage".
 
 ## Storage
 
@@ -31,7 +31,7 @@ has an emoji, so removing a photo needs no migration or backfill.
 **Query discipline.** Every existing `select` that reads `avatar` must be reviewed. Add
 `photo: true` only where the result is rendered through `<ChildAvatar>`. Sites that
 interpolate the emoji into prose (`${avatar} ${name}` on the invite and share pages) must
-*not* select `photo` — they render text and cannot show an image.
+*not* select `photo` - they render text and cannot show an image.
 
 Deletion is automatic: the photo is a column on `Child`, so `deleteChild` removes it with
 the row. No orphaned blobs, no cleanup job.
@@ -77,7 +77,7 @@ The thin DOM wrapper. Given a `File`:
 
 1. Reject over `PHOTO_MAX_UPLOAD_BYTES` before decoding, so a stray huge file cannot hang
    the tab.
-2. `createImageBitmap(file, { imageOrientation: "from-image" })` — this applies the EXIF
+2. `createImageBitmap(file, { imageOrientation: "from-image" })` - this applies the EXIF
    rotation flag, so phone photos are not stored sideways. This is the whole EXIF story;
    no parser needed.
 3. Walk `downscaleSteps`, drawing into an offscreen canvas at each step with
@@ -89,7 +89,7 @@ The thin DOM wrapper. Given a `File`:
    the image further.
 
 Result is a data URL held in React state, shown as the preview, and written to a hidden
-input. The preview *is* the stored image — what the parent sees is exactly what is saved.
+input. The preview *is* the stored image - what the parent sees is exactly what is saved.
 
 ## Form integration
 
@@ -103,19 +103,19 @@ input. The preview *is* the stored image — what the parent sees is exactly wha
 - Compression runs on selection, with a brief pending state. Errors render in the same
   style as other field errors.
 
-Three hidden inputs carry the state into the existing `useActionState` submit — no
+Three hidden inputs carry the state into the existing `useActionState` submit - no
 separate upload endpoint, no new route:
 
-- `avatar` — the emoji, exactly as today.
-- `photo` — the compressed data URL, or empty.
-- `photoAction` — `"keep"`, `"set"`, or `"clear"`. Editing a child must distinguish "the
+- `avatar` - the emoji, exactly as today.
+- `photo` - the compressed data URL, or empty.
+- `photoAction` - `"keep"`, `"set"`, or `"clear"`. Editing a child must distinguish "the
   parent did not touch the photo" from "the parent removed it", and an empty `photo` field
   alone cannot express that difference. On a create form this is always `"set"` or
   `"clear"`.
 
 **Error echo-back.** Child forms echo raw submitted strings in `values` so an error
 re-render can repopulate fields React would otherwise reset. The photo does *not* ride in
-that payload — `ChildFormValues` gains `hasPhoto: boolean`, not the data URL. The
+that payload - `ChildFormValues` gains `hasPhoto: boolean`, not the data URL. The
 compressed photo never left the browser, so the client keeps it in React state across the
 re-render at no cost. Echoing ~9 KB back on every failed submit would bloat the action
 state for a field the user has not lost.
@@ -129,7 +129,7 @@ state for a field the user has not lost.
 - `photoAction: "set"` → run `parsePhotoDataUrl`; on success store the data URL, on failure
   return the error code like any other validation failure.
 - An unrecognised `photoAction` falls back to `"keep"`, matching how an unknown `avatar`
-  silently falls back rather than erroring — a bad value there means a stale client, not a
+  silently falls back rather than erroring - a bad value there means a stale client, not a
   user mistake.
 
 `ParsedChild.photo` is `string | null | undefined`, and the three states map directly onto
@@ -137,7 +137,7 @@ Prisma: a value sets it, `null` clears it, `undefined` leaves it alone. `createC
 treats `undefined` as `null`.
 
 The server re-validates independently of the client. Client-side compression is a UX
-convenience, never a trust boundary — anyone can POST an arbitrary body to a server
+convenience, never a trust boundary - anyone can POST an arbitrary body to a server
 action, so the size and MIME checks must hold on the server on their own.
 
 Only the owner may set a photo, which follows from `updateChild`'s existing ownership
@@ -172,7 +172,7 @@ Three call sites cannot render an image and keep interpolating the emoji:
 - `invite/[token]/page.tsx:55` and `share/page.tsx:81` build prose sentences
   (`${avatar} ${name}`) listing children's names.
 - `letter-form.tsx:94` renders `{child.avatar} {child.name}` inside a `<select>`
-  `<option>`, whose content model permits text only — an `<img>` is invalid there.
+  `<option>`, whose content model permits text only - an `<img>` is invalid there.
 
 These must not select `photo`, and a child with a photo still shows their emoji in the
 recipient dropdown. That is an accepted limitation: replacing the native `<select>` with a
@@ -183,16 +183,16 @@ behaviour, which is far out of proportion to the gain here.
 
 Per the project's philosophy, `src/lib/child-photo.ts` is pure and tested:
 
-- `coverCrop` — landscape, portrait, square, and a source smaller than the target.
-- `downscaleSteps` — a huge source, a source just over 2×, a source already at target, a
+- `coverCrop` - landscape, portrait, square, and a source smaller than the target.
+- `downscaleSteps` - a huge source, a source just over 2×, a source already at target, a
   source below target.
-- `parsePhotoDataUrl` — each allowed MIME type, a disallowed one, a malformed prefix, empty
+- `parsePhotoDataUrl` - each allowed MIME type, a disallowed one, a malformed prefix, empty
   input, a payload just under the cap, and one just over.
 
 `child-input.test.ts` gains cases for the three `photoAction` branches, an invalid data URL
 under `"set"`, and an unrecognised `photoAction`.
 
-The canvas wrapper, the form component, and the render component are untested — they need
+The canvas wrapper, the form component, and the render component are untested - they need
 a DOM, which per the project's smell test means the rules belong in the lib, and they do.
 
 ## Why not blob storage
@@ -203,7 +203,7 @@ letters and sealing. None of that applies to a 7 KB avatar thumbnail that lives 
 with its `Child` row.
 
 Building blob storage now to serve both would mean credentials, a bucket, remote image
-patterns, and an orphan-cleanup story — all so a thumbnail can take a network round trip it
+patterns, and an orphan-cleanup story - all so a thumbnail can take a network round trip it
 does not need. Building it later, for the case that actually needs it, keeps this change
 small and leaves that design free. The two features share the `<ChildAvatar>` seam and
 nothing else, which is the right amount of coupling.

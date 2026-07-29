@@ -9,7 +9,7 @@ import { getAccessibleChildren, withoutPhotos } from "@/lib/children";
 import { canUploadImages } from "@/lib/subscription";
 import { decryptLetterField } from "@/lib/letter-crypto-key";
 
-// Only drafts have a page of their own — they're still editable. Sent letters
+// Only drafts have a page of their own - they're still editable. Sent letters
 // are sealed forever and can never be viewed, edited, or deleted by the author.
 export default async function EditDraftPage({
   params,

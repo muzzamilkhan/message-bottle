@@ -135,7 +135,7 @@ export function LetterForm({
 
       <p className="rounded-2xl bg-sea-100 px-4 py-3 text-sm text-sea-600">
         🗓️ This bottle opens when your child reaches the age you set on their
-        profile — no per-letter date needed.
+        profile - no per-letter date needed.
       </p>
 
       {state.error && (

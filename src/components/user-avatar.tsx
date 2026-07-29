@@ -1,6 +1,6 @@
 // The signed-in parent's own avatar: their Google profile photo, or a fallback
 // initial when there's no photo. When the account is Pro it wears a small ✨
-// badge in the corner — the same "Pro" signal the account page shows, attached
+// badge in the corner - the same "Pro" signal the account page shows, attached
 // to the person rather than a plain word.
 //
 // Distinct from ChildAvatar, which renders a *child's* emoji/photo and never a
@@ -38,7 +38,7 @@ export function UserAvatar({
     >
       {image ? (
         // Not next/image: an external avatar URL we don't want to proxy,
-        // resize, or add a remote-host allowlist for — the codebase renders
+        // resize, or add a remote-host allowlist for - the codebase renders
         // avatars with a plain <img> throughout.
         // eslint-disable-next-line @next/next/no-img-element
         <img

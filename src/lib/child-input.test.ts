@@ -204,7 +204,7 @@ describe("parseChildInput", () => {
     });
 
     it("falls back to keep for an unrecognised action", () => {
-      // A bad value means a stale client, not a user mistake — same reasoning
+      // A bad value means a stale client, not a user mistake - same reasoning
       // as an unknown avatar falling back to the default.
       const result = parseChildInput(
         { ...base, photo: "", photoAction: "nonsense" },
@@ -267,7 +267,7 @@ describe("parseChildInput", () => {
     });
 
     it("checks the name before validating the photo", () => {
-      // A missing name and an invalid photo both fail — the name check must
+      // A missing name and an invalid photo both fail - the name check must
       // win, so a bad photo can never mask a missing name.
       const result = parseChildInput(
         {

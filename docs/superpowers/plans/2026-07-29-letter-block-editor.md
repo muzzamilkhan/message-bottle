@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the letter body's plain textarea and visible `[[img:<cuid>]]` markers with a WYSIWYG block editor — text blocks showing real bold/italic while typing, and photo blocks showing the actual photograph.
+**Goal:** Replace the letter body's plain textarea and visible `[[img:<cuid>]]` markers with a WYSIWYG block editor - text blocks showing real bold/italic while typing, and photo blocks showing the actual photograph.
 
 **Architecture:** Blocks are a *view* over the existing string body, never a storage format. `Letter.body` stays a `String` in exactly today's format, so reconciliation, the orphan sweep, the child's renderer, and every blob-deletion path are untouched. Two new pure libs (`letter-blocks.ts`, `letter-rich-text.ts`) do the string↔block and DOM↔string conversion and carry all the tests; the React components around them stay untested, as canvas and DOM code already is in this codebase.
 
@@ -15,36 +15,36 @@
 - **Work directly on `main`.** No feature branches, no PRs. Atomic commits, one logical change each.
 - **Never skip the pre-commit hook.** No `--no-verify`, no unsetting `core.hooksPath`, no narrowing a check. A red check is a finding, not an obstacle.
 - **Modules under `src/lib/` import each other with relative paths and explicit `.ts` extensions** (e.g. `import { imageMarker } from "./letter-body.ts"`). The `@/` alias needs a bundler Node doesn't have. App code outside `src/lib/` still uses `@/`.
-- **Test files are `src/**/*.test.ts`** — the `npm test` glob does not match `.tsx`. Both new libs are plain `.ts`, so this holds.
+- **Test files are `src/**/*.test.ts`** - the `npm test` glob does not match `.tsx`. Both new libs are plain `.ts`, so this holds.
 - **Never use `dangerouslySetInnerHTML`.** User text always lands in a text node. This is the project's standing rule and the security basis of this feature.
 - **Do not change** `Letter.body`'s storage format, `prisma/schema.prisma`, `src/lib/letter-body.ts`, `src/app/actions.ts`, `src/lib/letter-input.ts`, `src/components/letter-body.tsx`, `src/app/api/letter-image/[id]/route.ts`, or any blob-deletion path.
 - **The two invariants hold:** sealing stays final (`status: "DRAFT"` in every letter `updateMany`/`deleteMany`), and the time lock stays server-side. No task here touches either mechanism.
-- **Components take `childOptions`, never a `children` prop** — `children` is React's and trips `react/no-children-prop`.
-- **Verify with** `npm test && npm run typecheck && npm run lint`. Never `npm run build` — it runs `prisma db push --accept-data-loss` against `DATABASE_URL` and is not a read-only check.
+- **Components take `childOptions`, never a `children` prop** - `children` is React's and trips `react/no-children-prop`.
+- **Verify with** `npm test && npm run typecheck && npm run lint`. Never `npm run build` - it runs `prisma db push --accept-data-loss` against `DATABASE_URL` and is not a read-only check.
 - **The dev server is already running on :3000.** Do not start another; see `dev.log` to debug.
-- `IMAGES_PER_LETTER` is **12** (from `src/lib/letter-image.ts`). Never hardcode the number in copy — import the constant.
+- `IMAGES_PER_LETTER` is **12** (from `src/lib/letter-image.ts`). Never hardcode the number in copy - import the constant.
 
 ---
 
 ## File Structure
 
 **Create:**
-- `src/lib/letter-blocks.ts` — string ↔ block-list conversion. Pure.
-- `src/lib/letter-blocks.test.ts` — its tests.
-- `src/lib/letter-rich-text.ts` — DOM-node-tree → body-string serialiser. Pure. The security boundary.
-- `src/lib/letter-rich-text.test.ts` — its tests.
-- `src/components/use-letter-image-upload.ts` — the compress-and-upload hook, lifted verbatim from `letter-image-input.tsx`.
-- `src/components/letter-text-block.tsx` — one contenteditable text block.
-- `src/components/letter-photo-block.tsx` — one photo block with move/remove controls.
-- `src/components/letter-selection-toolbar.tsx` — the floating B/I popover.
-- `src/components/letter-blocks-editor.tsx` — composes the above into the block list.
+- `src/lib/letter-blocks.ts` - string ↔ block-list conversion. Pure.
+- `src/lib/letter-blocks.test.ts` - its tests.
+- `src/lib/letter-rich-text.ts` - DOM-node-tree → body-string serialiser. Pure. The security boundary.
+- `src/lib/letter-rich-text.test.ts` - its tests.
+- `src/components/use-letter-image-upload.ts` - the compress-and-upload hook, lifted verbatim from `letter-image-input.tsx`.
+- `src/components/letter-text-block.tsx` - one contenteditable text block.
+- `src/components/letter-photo-block.tsx` - one photo block with move/remove controls.
+- `src/components/letter-selection-toolbar.tsx` - the floating B/I popover.
+- `src/components/letter-blocks-editor.tsx` - composes the above into the block list.
 
 **Modify:**
-- `src/components/letter-form.tsx` — holds blocks instead of a body string.
-- `CLAUDE.md` — document the block editor in the inline-images section.
+- `src/components/letter-form.tsx` - holds blocks instead of a body string.
+- `CLAUDE.md` - document the block editor in the inline-images section.
 
 **Delete:**
-- `src/components/letter-image-input.tsx` — its upload half moves to the hook; its button, caption, and thumbnail strip are the UI being replaced.
+- `src/components/letter-image-input.tsx` - its upload half moves to the hook; its button, caption, and thumbnail strip are the UI being replaced.
 
 Task order is dependency order: the two pure libs first (fully tested, no UI), then the upload hook, then the leaf components, then the editor that composes them, then the form swap that makes it live, then cleanup and docs.
 
@@ -65,7 +65,7 @@ Converts between the stored body string and a list of editor blocks. This is the
   - `function toBlocks(body: string): LetterBlock[]`
   - `function toBody(blocks: LetterBlock[]): string`
 
-**Why not reuse `parseLetterBody`:** that function returns *styled spans*, and re-serialising spans back to `**`/`*` does not round-trip — `parseSpans` renders an unmatched `*` as a literal character, and re-emitting it would change its meaning on the next parse. Splitting at the raw-string level with the same `IMAGE_MARKER_PATTERN` keeps the round-trip exact and avoids a second grammar.
+**Why not reuse `parseLetterBody`:** that function returns *styled spans*, and re-serialising spans back to `**`/`*` does not round-trip - `parseSpans` renders an unmatched `*` as a literal character, and re-emitting it would change its meaning on the next parse. Splitting at the raw-string level with the same `IMAGE_MARKER_PATTERN` keeps the round-trip exact and avoids a second grammar.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -199,7 +199,7 @@ describe("round trip", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `cd /Users/muzza/Projects/message-bottle && node --test src/lib/letter-blocks.test.ts`
-Expected: FAIL — cannot find module `./letter-blocks.ts`.
+Expected: FAIL - cannot find module `./letter-blocks.ts`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -212,7 +212,7 @@ Create `src/lib/letter-blocks.ts`:
 // it to decide which blobs are still referenced, and that is the mechanism
 // behind "delete the child, and every photo goes with it". These blocks exist
 // only inside the editor, and every edit is serialised straight back to the
-// same string — so nothing downstream can tell the editor changed.
+// same string - so nothing downstream can tell the editor changed.
 
 import { IMAGE_MARKER_PATTERN, imageMarker } from "./letter-body.ts";
 
@@ -223,7 +223,7 @@ export type LetterBlock =
 // Split a stored body into blocks.
 //
 // Deliberately not built on parseLetterBody: that returns styled spans, and
-// re-serialising spans back to **/* would not round-trip — parseSpans treats an
+// re-serialising spans back to **/* would not round-trip - parseSpans treats an
 // unmatched * as a literal character, so re-emitting it would change its
 // meaning on the next parse. Splitting the raw string on the same marker
 // pattern keeps the round-trip exact and leaves one grammar, not two.
@@ -292,7 +292,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ### Task 2: The rich-text serialiser (`letter-rich-text.ts`)
 
-Turns a contenteditable's DOM into the body string. **This is the security boundary of the feature** — the reason no sanitizer library is needed.
+Turns a contenteditable's DOM into the body string. **This is the security boundary of the feature** - the reason no sanitizer library is needed.
 
 **Files:**
 - Create: `src/lib/letter-rich-text.ts`
@@ -303,7 +303,7 @@ Turns a contenteditable's DOM into the body string. **This is the security bound
 - Produces:
   - `type RichNode = { type: "text"; text: string } | { type: "element"; tag: string; children: RichNode[] }`
   - `function serializeRichText(nodes: RichNode[]): string`
-  - `function fromDom(node: Node): RichNode[]` — adapts real DOM to `RichNode`. Not unit-tested (Node has no `DOMParser`); it is a five-line structural mapping.
+  - `function fromDom(node: Node): RichNode[]` - adapts real DOM to `RichNode`. Not unit-tested (Node has no `DOMParser`); it is a five-line structural mapping.
 
 **The design point:** the walk is an *allowlist that emits text*, never a blocklist that strips tags. An unrecognised element contributes only its text content. A pasted `<script>` therefore survives as inert text in a text node, and there is no path from a DOM node to stored markup. `RichNode` exists so this is testable in Node, which has no DOM.
 
@@ -385,7 +385,7 @@ describe("serializeRichText", () => {
     assert.equal(serializeRichText([el("p", t("One"))]), "One\n");
   });
 
-  // The security cases. An unhandled element is not "stripped" — it is simply
+  // The security cases. An unhandled element is not "stripped" - it is simply
   // not a case the walker handles, so only its text survives, into a string
   // that reaches the child as a text node.
   it("keeps only the text of a script element", () => {
@@ -424,7 +424,7 @@ describe("serializeRichText", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `cd /Users/muzza/Projects/message-bottle && node --test src/lib/letter-rich-text.test.ts`
-Expected: FAIL — cannot find module `./letter-rich-text.ts`.
+Expected: FAIL - cannot find module `./letter-rich-text.ts`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -444,8 +444,8 @@ Create `src/lib/letter-rich-text.ts`:
 // Think hard before doing it.
 
 // A minimal structural view of a DOM node. Real DOM nodes are mapped onto this
-// by fromDom() below, which keeps the serialiser testable in Node — which has
-// no DOMParser — by letting tests build plain objects instead.
+// by fromDom() below, which keeps the serialiser testable in Node - which has
+// no DOMParser - by letting tests build plain objects instead.
 export type RichNode =
   | { type: "text"; text: string }
   | { type: "element"; tag: string; children: RichNode[] };
@@ -454,7 +454,7 @@ export type RichNode =
 const BOLD_TAGS = new Set(["b", "strong"]);
 const ITALIC_TAGS = new Set(["i", "em"]);
 // Tags that end a line. A contenteditable produces these on Enter, and which
-// one it picks varies by browser — so handle both rather than depending on it.
+// one it picks varies by browser - so handle both rather than depending on it.
 const BLOCK_TAGS = new Set(["div", "p"]);
 
 // A run of text sharing one set of formatting flags. Collected before emitting
@@ -499,7 +499,7 @@ function collect(
       continue;
     }
 
-    // Everything else — <span>, <script>, <img>, anything pasted. The element
+    // Everything else - <span>, <script>, <img>, anything pasted. The element
     // itself is ignored and only its text survives. This is the default that
     // makes the walker safe by construction.
     collect(node.children, bold, italic, runs);
@@ -570,7 +570,7 @@ export function fromDom(root: Node): RichNode[] {
 Run: `cd /Users/muzza/Projects/message-bottle && node --test src/lib/letter-rich-text.test.ts`
 Expected: PASS, all cases.
 
-If the nesting case (`**very *small***`) or the merge case fails, the bug is in `setFormat`'s open/close ordering — fix it there rather than in `collect`, and do not change the assertions: the expected strings are what `parseSpans` in `letter-body.ts` reads back correctly.
+If the nesting case (`**very *small***`) or the merge case fails, the bug is in `setFormat`'s open/close ordering - fix it there rather than in `collect`, and do not change the assertions: the expected strings are what `parseSpans` in `letter-body.ts` reads back correctly.
 
 - [ ] **Step 5: Verify the serialiser agrees with the letter parser**
 
@@ -615,7 +615,7 @@ describe("agreement with the letter parser", () => {
 ```
 
 Run: `cd /Users/muzza/Projects/message-bottle && node --test src/lib/letter-rich-text.test.ts`
-Expected: PASS. If a nesting assertion fails, `setFormat`'s ordering is wrong — the parser is the authority here, not the serialiser.
+Expected: PASS. If a nesting assertion fails, `setFormat`'s ordering is wrong - the parser is the authority here, not the serialiser.
 
 - [ ] **Step 6: Run the full checks**
 
@@ -641,7 +641,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ### Task 3: Extract the upload hook
 
-Lift the compress-and-upload half of `letter-image-input.tsx` into a hook the block editor can call, leaving the old component's UI behind. Pure refactor — no behaviour change, and `letter-image-input.tsx` still works and is still used at the end of this task.
+Lift the compress-and-upload half of `letter-image-input.tsx` into a hook the block editor can call, leaving the old component's UI behind. Pure refactor - no behaviour change, and `letter-image-input.tsx` still works and is still used at the end of this task.
 
 **Files:**
 - Create: `src/components/use-letter-image-upload.ts`
@@ -657,7 +657,7 @@ Lift the compress-and-upload half of `letter-image-input.tsx` into a hook the bl
 
 - [ ] **Step 1: Create the hook**
 
-Create `src/components/use-letter-image-upload.ts`. Move `compress()` across **verbatim** from `letter-image-input.tsx` including its comments — it is working canvas code and this task must not change its behaviour:
+Create `src/components/use-letter-image-upload.ts`. Move `compress()` across **verbatim** from `letter-image-input.tsx` including its comments - it is working canvas code and this task must not change its behaviour:
 
 ```ts
 "use client";
@@ -686,7 +686,7 @@ async function compress(
   file: File,
 ): Promise<{ blob: Blob; width: number; height: number }> {
   // Applies the EXIF rotation flag, so phone photos aren't stored sideways.
-  // That's the whole EXIF story — and re-encoding through a canvas drops the
+  // That's the whole EXIF story - and re-encoding through a canvas drops the
   // rest of the metadata, including GPS coordinates, which is exactly what we
   // want for a photo of a child.
   const bitmap = await createImageBitmap(file, {
@@ -815,11 +815,11 @@ Replace the body of `onPick` with:
 - [ ] **Step 3: Verify nothing changed**
 
 Run: `cd /Users/muzza/Projects/message-bottle && npm test && npm run typecheck && npm run lint`
-Expected: all pass. This is a pure refactor — no test should change.
+Expected: all pass. This is a pure refactor - no test should change.
 
 - [ ] **Step 4: Check the letter form still works in the browser**
 
-The dev server is already running on :3000 — do not start another. Open `http://localhost:3000/letters/new`, and confirm the photo button still uploads and inserts a marker exactly as before. If it errors, check `dev.log`.
+The dev server is already running on :3000 - do not start another. Open `http://localhost:3000/letters/new`, and confirm the photo button still uploads and inserts a marker exactly as before. If it errors, check `dev.log`.
 
 - [ ] **Step 5: Commit**
 
@@ -848,7 +848,7 @@ One contenteditable paragraph region. The caret discipline here is the whole rea
 - Consumes: `serializeRichText`, `fromDom` from `@/lib/letter-rich-text`.
 - Produces: `function LetterTextBlock(props: { text: string; placeholder?: string; onChange: (text: string) => void; onFocus: () => void; onBlur: () => void }): JSX.Element`
 
-**The rule that makes contenteditable survivable:** React sets `innerHTML` **once on mount** and never again for the life of the block. State flows DOM → React only. If React ever re-rendered the element's content, the caret would jump to the start on every keystroke. `text` is therefore an *initial* value, not a controlled one — hence `useRef` for the initial render and a deliberately empty dependency list.
+**The rule that makes contenteditable survivable:** React sets `innerHTML` **once on mount** and never again for the life of the block. State flows DOM → React only. If React ever re-rendered the element's content, the caret would jump to the start on every keystroke. `text` is therefore an *initial* value, not a controlled one - hence `useRef` for the initial render and a deliberately empty dependency list.
 
 - [ ] **Step 1: Write the component**
 
@@ -865,12 +865,12 @@ import { fromDom, serializeRichText } from "@/lib/letter-rich-text";
 // The load-bearing rule: React writes this element's content ONCE, on mount,
 // and never again. A contenteditable whose innerHTML React re-renders puts the
 // caret back at the start on every keystroke, so `text` is an initial value,
-// not a controlled one — state flows DOM → React only. Everything else here
+// not a controlled one - state flows DOM → React only. Everything else here
 // follows from that.
 
 // Render the initial text as markup the browser will edit. Bold and italic are
 // the only elements ever produced, and every piece of the parent's text goes
-// through escapeHtml first — so this is markup we generated, not markup anyone
+// through escapeHtml first - so this is markup we generated, not markup anyone
 // supplied. (dangerouslySetInnerHTML is still not used: this is a direct
 // innerHTML write on a ref, under the same rule, and it is the only place in
 // the codebase that writes markup at all.)
@@ -939,7 +939,7 @@ export function LetterTextBlock({
   onBlur,
 }: {
   // The initial content only. Later changes to this prop are ignored by
-  // design — see the note at the top of this file.
+  // design - see the note at the top of this file.
   text: string;
   placeholder?: string;
   onChange: (text: string) => void;
@@ -995,7 +995,7 @@ export function LetterTextBlock({
 - [ ] **Step 2: Verify it compiles and lints**
 
 Run: `cd /Users/muzza/Projects/message-bottle && npm run typecheck && npm run lint`
-Expected: both pass. The one `eslint-disable-next-line` is intentional and explained by the comment above it; do not remove it or add the dependency the rule asks for — doing so reintroduces the caret bug.
+Expected: both pass. The one `eslint-disable-next-line` is intentional and explained by the comment above it; do not remove it or add the dependency the rule asks for - doing so reintroduces the caret bug.
 
 - [ ] **Step 3: Commit**
 
@@ -1038,7 +1038,7 @@ import { letterImageUrl } from "@/lib/letter-image-url";
 import type { DraftImage } from "@/components/use-letter-image-upload";
 
 // A photograph, where the parent placed it. This replaces the [[img:<cuid>]]
-// marker they used to have to place by hand — the photo is the marker now.
+// marker they used to have to place by hand - the photo is the marker now.
 export function LetterPhotoBlock({
   image,
   canMoveUp,
@@ -1058,7 +1058,7 @@ export function LetterPhotoBlock({
     <div className="group relative my-4">
       {/* Plain <img>, not next/image: the route is authorized per-request and
           returns no-store, so there is nothing for the optimizer to fetch or
-          cache. No token here — this is the author's own view, and the route
+          cache. No token here - this is the author's own view, and the route
           authorizes them by session. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -1229,7 +1229,7 @@ export function LetterBlocksEditor({
   onChange: (blocks: LetterBlock[]) => void;
   letterId?: string;
   // Whether this author's subscription covers uploading. The server checks
-  // again — this only decides what the form offers.
+  // again - this only decides what the form offers.
   canUpload: boolean;
   // Photos this draft already holds, so their dimensions are known before the
   // image loads. Uploads from this session are merged in.
@@ -1246,7 +1246,7 @@ export function LetterBlocksEditor({
   const insertAt = useRef<number | null>(null);
 
   // Keys are assigned once per block and kept in step with the block list by
-  // index. A ref, not state — changing a key must never trigger a render.
+  // index. A ref, not state - changing a key must never trigger a render.
   const nextKey = useRef(0);
   const keysRef = useRef<string[]>([]);
   if (keysRef.current.length !== blocks.length) {
@@ -1309,7 +1309,7 @@ export function LetterBlocksEditor({
         return;
       }
       const range = selection.getRangeAt(0);
-      // Only inside this editor's text blocks — a selection elsewhere on the
+      // Only inside this editor's text blocks - a selection elsewhere on the
       // page is none of our business.
       const container =
         range.commonAncestorContainer.nodeType === 1
@@ -1370,7 +1370,7 @@ export function LetterBlocksEditor({
         {keyed.map(({ key, block }, index) => {
           if (block.kind === "photo") {
             const image = known.get(block.id);
-            // An id with no known dimensions still renders — the image loads,
+            // An id with no known dimensions still renders - the image loads,
             // the box just isn't reserved.
             return (
               <LetterPhotoBlock
@@ -1473,7 +1473,7 @@ export function LetterBlocksEditor({
 - [ ] **Step 2: Verify it compiles and lints**
 
 Run: `cd /Users/muzza/Projects/message-bottle && npm run typecheck && npm run lint`
-Expected: both pass. The editor is not yet reachable in the UI — Task 7 wires it in.
+Expected: both pass. The editor is not yet reachable in the UI - Task 7 wires it in.
 
 - [ ] **Step 3: Commit**
 
@@ -1544,7 +1544,7 @@ Replace the `<label>`/`<textarea>`/`<LetterImageInput>` group with:
       </div>
 ```
 
-Note `htmlFor="body"` and `id="body"` are gone with the textarea — a `<span className="field-label">` replaces the `<label>`, because there is no single form control to point at. The text blocks carry their own `aria-label`.
+Note `htmlFor="body"` and `id="body"` are gone with the textarea - a `<span className="field-label">` replaces the `<label>`, because there is no single form control to point at. The text blocks carry their own `aria-label`.
 
 - [ ] **Step 2: Delete the old component**
 
@@ -1561,7 +1561,7 @@ Expected: the grep prints nothing, and both checks pass. If `DraftImage` is repo
 - [ ] **Step 4: Run the full checks**
 
 Run: `cd /Users/muzza/Projects/message-bottle && npm test && npm run typecheck && npm run lint`
-Expected: all pass. No test should have changed — the server contract is identical.
+Expected: all pass. No test should have changed - the server contract is identical.
 
 - [ ] **Step 5: Test it by hand in the browser**
 
@@ -1604,23 +1604,23 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Update the inline-images section**
 
-In `CLAUDE.md`, find the "Inline letter images" section. Leave every sentence about storage, authorization, the age gate, and blob deletion exactly as it is — none of that changed. Append this paragraph to the end of that section:
+In `CLAUDE.md`, find the "Inline letter images" section. Leave every sentence about storage, authorization, the age gate, and blob deletion exactly as it is - none of that changed. Append this paragraph to the end of that section:
 
 ```markdown
 Authors never see the marker. `src/components/letter-blocks-editor.tsx` presents the body
-as blocks — text blocks are `contenteditable` regions showing real bold and italic, photo
-blocks show the photograph — and `src/lib/letter-blocks.ts` converts to and from the stored
+as blocks - text blocks are `contenteditable` regions showing real bold and italic, photo
+blocks show the photograph - and `src/lib/letter-blocks.ts` converts to and from the stored
 string on every edit. The string is the format; blocks are only a view, which is what keeps
 `letterImageIds` and every blob-deletion path reading exactly what they always have.
 
 `src/lib/letter-rich-text.ts` turns the contenteditable's DOM back into that string, and it
 is the security boundary: an **allowlist that emits text**, so an element it doesn't
 recognise contributes only its text content and pasted markup arrives as prose. There is no
-sanitizer here and no `dangerouslySetInnerHTML` — adding a tag to that walker is the only
+sanitizer here and no `dangerouslySetInnerHTML` - adding a tag to that walker is the only
 way to widen what the editor accepts.
 ```
 
-Also update the "Testing philosophy" section's list of tested libs — find the sentence listing them and add the two new ones:
+Also update the "Testing philosophy" section's list of tested libs - find the sentence listing them and add the two new ones:
 
 ```markdown
 The tested libs are `age`, `letters`, `child-input`, `letter-input`, `letter-stack-style`,
@@ -1654,11 +1654,11 @@ The feature is done when all of these hold:
 - `src/components/letter-image-input.tsx` no longer exists, and nothing imports it.
 - No `[[img:` string appears anywhere in the authoring UI.
 - Loading and saving an existing draft leaves `Letter.body` byte-identical when nothing was edited (Task 1's round-trip tests guarantee the conversion; confirm once by hand in Prisma Studio).
-- The child's `/open/[token]` page renders letters written in the new editor exactly as before — same paragraphs, same emphasis, same photos.
+- The child's `/open/[token]` page renders letters written in the new editor exactly as before - same paragraphs, same emphasis, same photos.
 - `git diff` against the starting commit touches none of: `prisma/schema.prisma`, `src/app/actions.ts`, `src/lib/letter-body.ts`, `src/lib/letter-input.ts`, `src/components/letter-body.tsx`, `src/app/api/letter-image/[id]/route.ts`.
 
 ## Known gaps, carried from the design
 
-- **No preview of the child's page chrome.** The editor reproduces content faithfully — paragraphs, emphasis, photos — but not the bottle, the fonts, or the paper. The cheap retrofit, if it turns out to matter, is rendering `LetterBody` inside the seal-confirmation panel above the irreversible button.
+- **No preview of the child's page chrome.** The editor reproduces content faithfully - paragraphs, emphasis, photos - but not the bottle, the fonts, or the paper. The cheap retrofit, if it turns out to matter, is rendering `LetterBody` inside the seal-confirmation panel above the irreversible button.
 - **Contenteditable caret behaviour is the part most likely to need iteration** once the editor is in real use. The structural mitigations are in place (uncontrolled blocks, no block merging, plain-text paste, stable keys), but expect to revisit Task 4 after Task 7's manual pass.
 - **`execCommand` is formally deprecated.** Removed nowhere, and the standard choice at this size. If a browser drops it, the replacement is a `Range`-based toggle behind `format()` in the editor.

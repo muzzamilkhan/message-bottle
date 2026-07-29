@@ -21,7 +21,7 @@ model User {
   children        Child[]
   createdAt       DateTime      @default(now())
   // Subscription tier. Null means free. Read through canUploadImages in
-  // src/lib/subscription.ts — never compared directly — so adding a tier is a
+  // src/lib/subscription.ts - never compared directly - so adding a tier is a
   // one-line change there. Set by hand until billing exists.
   subscription    String?
   letterImages    LetterImage[]
@@ -103,7 +103,7 @@ model Letter {
   child         Child?   @relation(fields: [childId], references: [id], onDelete: SetNull)
   childId       String?
   // Lifecycle: "DRAFT" letters are still editable by their author and never
-  // reach the child. "SENT" letters are sealed forever — the author can no
+  // reach the child. "SENT" letters are sealed forever - the author can no
   // longer view, edit, or delete them.
   status        String   @default("DRAFT")
   author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -121,7 +121,7 @@ model Letter {
 // ever served through /api/letter-image/[id], which authorizes every request.
 model LetterImage {
   id       String @id @default(cuid())
-  // Pathname in the private blob store. Never a public URL — a private store
+  // Pathname in the private blob store. Never a public URL - a private store
   // is unreadable by URL at all, which is the point.
   pathname String @unique
   // The stored size, so the renderer can reserve the aspect box before the
@@ -132,7 +132,7 @@ model LetterImage {
   mimeType String
   // Null while the image belongs to a new letter that hasn't been saved yet.
   // Set on the letter's first save. Cascade removes the row with the letter,
-  // but NOT the blob — blob deletion is always explicit.
+  // but NOT the blob - blob deletion is always explicit.
   letter   Letter? @relation(fields: [letterId], references: [id], onDelete: Cascade)
   letterId String?
   // The uploader. Both the upload gate and the orphan sweep hang off this.

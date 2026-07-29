@@ -42,7 +42,7 @@ async function compress(
   file: File,
 ): Promise<{ blob: Blob; width: number; height: number }> {
   // Applies the EXIF rotation flag, so phone photos aren't stored sideways.
-  // That's the whole EXIF story — and re-encoding through a canvas drops the
+  // That's the whole EXIF story - and re-encoding through a canvas drops the
   // rest of the metadata, including GPS coordinates, which is exactly what we
   // want for a photo of a child.
   const bitmap = await createImageBitmap(file, {
@@ -67,7 +67,7 @@ async function compress(
   // wins. If even the lowest quality overshoots, the photo is too dense to fit
   // at this size, so drop to a smaller long edge and try again. Each rung
   // redraws from the previous one, so every step stays gentle, and the ladder's
-  // floor guarantees this terminates — at a real photo it lands on the first
+  // floor guarantees this terminates - at a real photo it lands on the first
   // rung, so nothing shrinks past the fit size.
   const targetLong = Math.max(target.width, target.height);
   for (const longEdge of shrinkLadder(targetLong)) {
