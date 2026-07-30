@@ -106,6 +106,20 @@ function parse(
   };
 }
 
+// Every child this parent owns, oldest first, with the fields the API needs.
+//
+// Separate from getAccessibleChildren in children.ts, which deliberately
+// returns the narrow set the letter form renders - this one carries the
+// birthday, the timer, and the open token, none of which belong in a <select>.
+// Both scope on parentId, which is the whole access model.
+export async function listChildrenFor(userId: string): Promise<ChildRecord[]> {
+  return prisma.child.findMany({
+    where: { parentId: userId },
+    orderBy: { createdAt: "asc" },
+    select: CHILD_FIELDS,
+  });
+}
+
 // A new child, with the self-authenticating open token minted upfront - every
 // child has an open age, so the link exists from the start.
 export async function createChildFor(
