@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { lifetimeProSignup } from "@/flags";
+import { promoteNewUser } from "@/lib/pro-signup";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -22,17 +22,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   events: {
     // Lifetime-Pro promotion. While the flag is on, a brand-new user is granted
     // the PRO tier the moment their account is created - the adapter has already
-    // inserted the row with a null subscription, so we promote it here. The flag
-    // fails closed, so if it can't be proven on, the signup stays free. This only
-    // ever grants Pro; it never revokes it, so turning the flag off later leaves
-    // already-promoted members untouched.
+    // inserted the row with a null subscription, so we promote it here.
+    //
+    // The promotion itself lives in @/lib/pro-signup because the mobile sign-in
+    // route creates users without going through this hook, and the two must
+    // treat a new account identically.
     async createUser({ user }) {
       if (!user.id) return;
-      if (!(await lifetimeProSignup())) return;
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { subscription: "PRO" },
-      });
+      await promoteNewUser(user.id);
     },
   },
 });
