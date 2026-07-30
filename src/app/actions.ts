@@ -1,17 +1,19 @@
 "use server";
 
-import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import type { ChildFormValues } from "@/lib/child-input";
 import {
-  childInputMessage,
-  parseChildInput,
-  type ChildFormValues,
-  type ParsedChild,
-} from "@/lib/child-input";
+  childServiceMessage,
+  createChildFor,
+  deleteChildFor,
+  updateChildFor,
+  type ChildInput,
+  type ChildServiceFailure,
+} from "@/lib/child-service";
 import {
   letterInputMessage,
   parseLetterInput,
@@ -307,29 +309,28 @@ export type ChildFormState = {
   values?: ChildFormValues;
 };
 
-// Adapt FormData to the pure parser in @/lib/child-input, turning a rejection
-// code back into the message the form shows. The rules themselves live in the
-// lib so they can be tested without a request.
-function parseChildForm(
-  formData: FormData,
-): { error: string; values: ChildFormValues } | ParsedChild {
-  const result = parseChildInput({
+// Read the child fields off FormData in the shape the service parses. The
+// rules live in @/lib/child-input and the writes in @/lib/child-service, so
+// this is only transport.
+function childInputFrom(formData: FormData): ChildInput {
+  return {
     name: String(formData.get("name") ?? ""),
     avatar: String(formData.get("avatar") ?? ""),
     birthday: String(formData.get("birthday") ?? ""),
     openAtAge: String(formData.get("openAtAge") ?? ""),
     photo: String(formData.get("photo") ?? ""),
     photoAction: String(formData.get("photoAction") ?? ""),
-  });
+  };
+}
 
-  if (result.ok) return result.value;
-
+// Turn a service refusal into the state the form re-renders from.
+function childFailureState(failure: ChildServiceFailure): ChildFormState {
   return {
-    error: childInputMessage(result.error, {
-      name: result.values.name,
-      currentAge: result.currentAge,
+    error: childServiceMessage(failure.error, {
+      name: failure.values?.name ?? "",
+      currentAge: failure.currentAge,
     }),
-    values: result.values,
+    values: failure.values,
   };
 }
 
@@ -342,22 +343,8 @@ export async function createChild(
     return { error: "You need to be signed in." };
   }
 
-  const parsed = parseChildForm(formData);
-  if ("error" in parsed) return parsed;
-
-  await prisma.child.create({
-    data: {
-      name: parsed.name,
-      avatar: parsed.avatar,
-      photo: parsed.photo ?? null,
-      birthday: parsed.birthday,
-      openAtAge: parsed.openAtAge,
-      // Every child has an open age, so mint the self-authenticating open token
-      // upfront.
-      openToken: randomBytes(24).toString("base64url"),
-      parentId: session.user.id,
-    },
-  });
+  const result = await createChildFor(session.user.id, childInputFrom(formData));
+  if (!result.ok) return childFailureState(result);
 
   revalidatePath("/children");
   revalidatePath("/letters/new");
@@ -375,79 +362,31 @@ export async function updateChild(
     return { error: "You need to be signed in." };
   }
 
-  const id = String(formData.get("id") ?? "").trim();
-  if (!id) return { error: "We couldn't tell which child to update." };
-
-  const existing = await prisma.child.findFirst({
-    where: { id, parentId: session.user.id },
-    select: { id: true, openToken: true },
-  });
-  if (!existing) {
-    return { error: "That child isn't one you can edit." };
-  }
-
-  const parsed = parseChildForm(formData);
-  if ("error" in parsed) return parsed;
-
-  // Keep an existing token stable; mint one if this child never had it.
-  const openToken = existing.openToken ?? randomBytes(24).toString("base64url");
-
-  await prisma.child.update({
-    where: { id: existing.id },
-    data: {
-      name: parsed.name,
-      avatar: parsed.avatar,
-      photo: parsed.photo,
-      birthday: parsed.birthday,
-      openAtAge: parsed.openAtAge,
-      openToken,
-    },
-  });
+  const result = await updateChildFor(
+    session.user.id,
+    String(formData.get("id") ?? ""),
+    childInputFrom(formData),
+  );
+  if (!result.ok) return childFailureState(result);
 
   revalidatePath("/children");
   revalidatePath("/letters/new");
   return { ok: true };
 }
 
+// Removing a child is destructive: every letter written to them - drafts and
+// sealed alike - is deleted forever, their photos go with them, and the private
+// open link stops working. A refusal is silent here because the form has
+// nowhere to show one; the service reports it for callers that do.
 export async function deleteChild(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) return;
 
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-
-  // Removing a child is destructive: every letter written to them - drafts and
-  // sealed alike - is deleted forever, and the private open link stops working.
-  const child = await prisma.child.findFirst({
-    where: { id, parentId: session.user.id },
-    select: { id: true },
-  });
-  if (!child) return;
-
-  // Every letter written to this child, drafts and sealed alike - and the
-  // photos inside them.
-  //
-  // The pathnames are collected inside the same transaction that deletes the
-  // letters, so the list is taken from the same snapshot the delete acts on. A
-  // concurrent save attaching an image to one of these letters - a second tab
-  // mid-edit - either lands before the snapshot (and is collected) or after the
-  // delete (and has no letter to attach to); it can't slip between the two and
-  // leave its blob orphaned in storage.
-  const pathnames = await prisma.$transaction(async (tx) => {
-    const images = await tx.letterImage.findMany({
-      where: { letter: { childId: child.id } },
-      select: { pathname: true },
-    });
-    // The rows go with the letters, by cascade.
-    await tx.letter.deleteMany({ where: { childId: child.id } });
-    await tx.child.delete({ where: { id: child.id } });
-    return images.map((image) => image.pathname);
-  });
-
-  // Blob deletion is a network call and never belongs inside a transaction, so
-  // it runs after the commit. A failure here leaves blobs with no rows pointing
-  // at them - unreachable, and swept later - which is the safe direction.
-  await deleteLetterImages(pathnames);
+  const result = await deleteChildFor(
+    session.user.id,
+    String(formData.get("id") ?? ""),
+  );
+  if (!result.ok) return;
 
   revalidatePath("/children");
   revalidatePath("/dashboard");
