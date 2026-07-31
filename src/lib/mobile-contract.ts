@@ -16,6 +16,7 @@
 // The mappers are pure, so the date and derived-age rules are tested.
 
 import { ageInYears, hasReachedOpenAge } from "./age.ts";
+import type { BottlesView } from "./open-bottle.ts";
 
 // ---------- children ----------
 
@@ -139,6 +140,45 @@ export type ApiBottles =
       opensAt: string;
       letters: ApiOpenLetter[];
     };
+
+// A view from open-bottle.ts, rendered for the wire.
+//
+// Written as a switch on `status` rather than a spread of a common base, so
+// adding a field to the open case can never silently add it to the locked one.
+// The locked branch touches no letter at all.
+export function toApiBottles(view: BottlesView): ApiBottles {
+  if (view.status === "unavailable") return { status: "unavailable" };
+
+  const child: ApiBottleChild = {
+    name: view.child.name,
+    avatar: view.child.avatar,
+    photo: view.child.photo,
+    openAtAge: view.child.openAtAge,
+  };
+
+  if (view.status === "locked") {
+    return {
+      status: "locked",
+      child,
+      opensAt: view.openDate.toISOString(),
+      letterCount: view.letterCount,
+    };
+  }
+
+  return {
+    status: "open",
+    child,
+    opensAt: view.openDate.toISOString(),
+    letters: view.letters.map((letter) => ({
+      id: letter.id,
+      title: letter.title,
+      body: letter.body,
+      authorName: letter.authorName,
+      writtenAt: letter.createdAt.toISOString(),
+      images: letter.images,
+    })),
+  };
+}
 
 // ---------- errors ----------
 
