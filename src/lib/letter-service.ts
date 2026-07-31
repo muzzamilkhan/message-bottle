@@ -27,7 +27,10 @@ import {
 } from "./letter-input.ts";
 import { canUploadImages } from "./subscription.ts";
 import { letterImageIds } from "./letter-body.ts";
-import { encryptLetterField } from "./letter-crypto-key.ts";
+import {
+  decryptLetterField,
+  encryptLetterField,
+} from "./letter-crypto-key.ts";
 import {
   IMAGE_MAX_UPLOAD_BYTES,
   IMAGES_PER_LETTER,
@@ -180,6 +183,103 @@ export async function saveLetterFor(
   await deleteLetterImages(created.stale.map((image) => image.pathname));
 
   return { ok: true, value: { id: created.id, sealed: sealing } };
+}
+
+// A draft as its author reads it back: contents decrypted, images in order.
+export type LetterDraft = {
+  id: string;
+  title: string;
+  body: string;
+  recipientName: string;
+  childId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  images: { id: string; width: number; height: number }[];
+};
+
+// The author's letters, exactly as the web dashboard shows them: drafts in
+// full, sealed letters as a count.
+//
+// This asymmetry is the sealing invariant on the read side. A sent letter's
+// title is never decrypted and never leaves the server - src/app/dashboard only
+// `count`s them, and src/app/letters/[id] 404s anything not DRAFT - so the API
+// must not offer more. Do not add sent titles here.
+export async function listLettersFor(userId: string): Promise<{
+  drafts: LetterDraft[];
+  sentCount: number;
+}> {
+  const [drafts, sentCount] = await Promise.all([
+    prisma.letter.findMany({
+      where: { authorId: userId, status: "DRAFT" },
+      orderBy: { updatedAt: "desc" },
+      select: LETTER_FIELDS,
+    }),
+    prisma.letter.count({ where: { authorId: userId, status: "SENT" } }),
+  ]);
+
+  return { drafts: drafts.map(decryptDraft), sentCount };
+}
+
+// One draft the caller authored. Null for a letter that doesn't exist, isn't
+// theirs, or has been sealed - all three read the same from outside, so this is
+// never an oracle for which letters exist.
+export async function getDraftFor(
+  userId: string,
+  letterId: string,
+): Promise<LetterDraft | null> {
+  const id = letterId.trim();
+  if (!id) return null;
+
+  const draft = await prisma.letter.findFirst({
+    where: { id, authorId: userId, status: "DRAFT" },
+    select: LETTER_FIELDS,
+  });
+
+  return draft ? decryptDraft(draft) : null;
+}
+
+// Seal a draft: DRAFT -> SENT, one way, final.
+//
+// Seals what is stored rather than what the caller sends, so sealing is an
+// intent and not a last write - a client can't smuggle different words into a
+// letter in the same breath as making it permanent. It runs the whole of
+// saveLetterFor, so the completeness rules ("a sent letter needs a recipient
+// and a message"), the subscription check on photos, and the final image
+// reconciliation all apply exactly as they do on the web.
+export async function sealLetterFor(
+  userId: string,
+  letterId: string,
+): Promise<LetterServiceResult<{ id: string; sealed: boolean }>> {
+  const draft = await getDraftFor(userId, letterId);
+  if (!draft) return { ok: false, error: "LETTER_NOT_EDITABLE" };
+
+  return saveLetterFor(userId, {
+    id: draft.id,
+    title: draft.title,
+    childId: draft.childId ?? "",
+    body: draft.body,
+    intent: "submit",
+  });
+}
+
+const LETTER_FIELDS = {
+  id: true,
+  title: true,
+  body: true,
+  recipientName: true,
+  childId: true,
+  createdAt: true,
+  updatedAt: true,
+  images: { select: { id: true, width: true, height: true } },
+} as const;
+
+// Contents are stored encrypted; the author owns this draft, so decrypt it back.
+function decryptDraft(row: LetterDraft): LetterDraft {
+  return {
+    ...row,
+    title: decryptLetterField(row.title),
+    body: decryptLetterField(row.body),
+  };
 }
 
 // Delete a draft and the photos inside it. A sent letter is sealed forever and
